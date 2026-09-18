@@ -1,74 +1,73 @@
-# Quester
+Quester
 
-Leichter Questhelfer für den installierten Classic-Beta-Client 1.60.1.
+Lightweight quest helper for WoW Forever client 1.60.1.
 
-## Erste Verwendung
+First Use
 
-1. WoW neu starten, falls das Addon noch nicht in der Addonliste erscheint; sonst `/reload`.
-2. Quester in der Addonliste aktivieren.
-3. Unter `/macro` → **Allgemeine Makros** das globale Makro **QuesterTarget** auf die Aktionsleiste ziehen.
-4. Die kompakte Leiste zeigt ein 30-Pixel-Icon pro erkanntem Gegnerziel. Linksklick visiert das Ziel an; Name und Questfortschritt stehen im Tooltip. Am Griff links verschieben, per Rechtsklick auf den Griff ein- und ausklappen. Der Griff bleibt eingeklappt sichtbar; der Zustand wird gespeichert. `/quester hide` blendet die gesamte Leiste aus, `/quester` zeigt sie wieder.
-5. Für Sammelquests einen passenden Gegner anvisieren oder mit der Maus darüberfahren. Nennt sein Tooltip ein eindeutig zuordenbares, offenes Questziel, erscheint der echte NPC-Name als Ziel-Icon und im Makro.
-6. Questgeber ansprechen: verfügbare Quests werden ausgewählt und angenommen. Mit gedrückter **Shift-Taste** bleibt die Annahme manuell.
+1. Restart WoW if the addon does not yet appear in the addon list; otherwise use /reload.
+2. Enable Quester in the addon list.
+3. Under /macro → General Macros, drag the global QuesterTarget macro onto your action bar.
+4. The compact bar displays one 30-pixel icon for each detected enemy target. Left-click an icon to target that enemy; its name and quest progress are shown in the tooltip. Drag the handle on the left to reposition the bar, and right-click the handle to collapse or expand it. The handle remains visible while collapsed, and the state is saved. /quester hide hides the entire bar; /quester shows it again.
+5. For collection quests, target a suitable enemy or mouse over it. If its tooltip contains an open quest objective that can be matched unambiguously, the actual NPC name appears as a target icon and in the macro.
+6. Talk to a quest giver: available quests are selected and accepted automatically. Hold Shift to keep quest acceptance manual.
 
-Das Makro wird bei Queständerungen aktualisiert, im Kampf erst nach Kampfende. Ein Klick sucht offene Gegnerziele in Questlog-Reihenfolge und stoppt beim ersten vorhandenen lebenden Ziel. Dabei wird die vorherige Zielauswahl aufgehoben. Das Makro startet keinen Angriff.
+The macro is updated whenever quest data changes. During combat, updates are delayed until combat ends. Each click searches open enemy objectives in quest log order and stops at the first existing living target. The previous target selection is cleared first. The macro does not start an attack.
 
-## Befehle
+Commands
 
-| Befehl | Wirkung |
-| --- | --- |
-| `/quester` oder `/quester show` | Ziel-Icons einblenden |
-| `/quester hide` | Ziel-Icons ausblenden |
-| `/quester inspect` | Kopierbare Diagnose für den anvisierten NPC öffnen |
-| `/quester debug` | Original-Zieltexte und erkannte Namen im Chat ausgeben |
-| `/quester status` | Hilfe, Einstellungen und Anzahl ausgelassener Ziele |
-| `/quester auto on` / `/quester auto off` | Annahme und Abgabe ausdrücklich ein-/ausschalten |
-| `/quester resume` | Fehlersperre lösen; danach den Questgeber erneut ansprechen |
-| `/quester turnin` | Nur automatische Abgabe umschalten |
-| `/quester auto` | Automatische Annahme und Abgabe gemeinsam umschalten |
-| `/quester macro` | Makro-Aktualisierung umschalten; vorhandenes Makro bleibt erhalten |
-| `/quester trivial` | Graue Quests im Auswahlfenster ebenfalls auswählen |
-| `/quester update` | Makro-Aktualisierung anfordern |
+Command	Effect
+/quester or /quester show	Show target icons
+/quester hide	Hide target icons
+/quester inspect	Open a copyable diagnostic report for the targeted NPC
+/quester debug	Print original objective text and detected names in chat
+/quester status	Show help, settings, and the number of omitted targets
+/quester auto on / /quester auto off	Explicitly enable/disable automatic quest acceptance and turn-in
+/quester resume	Clear the error lock; then talk to the quest giver again
+/quester turnin	Toggle automatic quest turn-in only
+/quester auto	Toggle automatic quest acceptance and turn-in together
+/quester macro	Toggle macro updates; the existing macro remains in place
+/quester trivial	Also select grey/trivial quests in the selection window
+/quester update	Request a macro update
 
-Questannahme, Questabgabe, Auswahl grauer Quests und Makro-Aktualisierung sind standardmäßig aktiv. Bereits ausdrücklich gespeicherte Einstellungen bleiben erhalten. Einstellungen und Makro werden accountweit gespeichert. Das Makro wird jeweils mit den Zielen des aktuell eingeloggten Charakters befüllt. Der Name `QuesterTarget` ist für dieses Addon reserviert. Eine alte Charakterkopie wird erst nach erfolgreicher Erstellung des globalen Makros entfernt. Danach das globale Makro einmal neu auf die Aktionsleiste ziehen. Bei vollem globalem Makrospeicher bleibt die alte Kopie erhalten.
+Quest acceptance, quest turn-in, selection of grey quests, and macro updates are enabled by default. Previously saved explicit settings are preserved. Settings and the macro are stored account-wide. The macro is populated with the objectives of the currently logged-in character. The name QuesterTarget is reserved for this addon. An old character-specific copy is removed only after the global macro has been created successfully. Afterwards, drag the global macro onto the action bar once again. If the global macro storage is full, the old copy is retained.
 
-## Grenzen der ersten Version
+Limitations of the First Version
 
-- Gegnernamen stammen aus lokalisierten Blizzard-Texten für offene Tötungsziele, einschließlich nummerierter Platzhalter und einfacher Zählertexte wie `Waldwolf: 0/8`. Häufige englische Mehrzahlformen werden über eine begrenzte Zuordnung normalisiert, etwa `Kobold Workers` zu `Kobold Worker`. Andere NPC-Namen bleiben unverändert. Für Sammel- und Tötungsziele werden eindeutige NPC-Tooltip-Zuordnungen bevorzugt. Ohne eine solche Beobachtung bleiben Sammelziele unbekannt. Weltobjekte sind keine anvisierbaren Gegner. `/quester debug` zeigt die Zieltexte bei Bedarf; eine externe Questdatenbank wird nicht benötigt.
-- Es werden die durch die Questlog-API gelieferten Einträge berücksichtigt; eingeklappte Kategorien können abhängig vom Client Ziele ausblenden. Bei fehlenden Zielen Kategorien aufklappen und `/quester update` ausführen.
-- Das Makro ist auf 255 Bytes begrenzt. Überzählige Ziele werden ausgelassen; `/quester status` zeigt deren Anzahl. Über die einzelnen Icons lassen sich auch Ziele außerhalb dieses Limits anvisieren. Abgeschlossene Ziele machen wieder Platz.
-- Ein freier globaler Makroplatz ist erforderlich. Die Ausführung erfolgt durch deinen Tastendruck bzw. Klick.
-- Graue Quests werden standardmäßig ebenfalls ausgewählt; `/quester trivial` schaltet dies um. Öffnest du deren Questdetail selbst, greift die automatische Annahme ebenfalls; Shift pausiert sie.
-- Abgabebereite Quests werden beim NPC geöffnet und abgeschlossen. Ohne Auswahlbelohnung oder mit genau einer Auswahl wird die Belohnung automatisch abgeholt. Bei mehreren Auswahlbelohnungen und bei Geldkosten bleibt die manuelle Auswahl bzw. Bestätigung erhalten. Shift pausiert Annahme und Abgabe.
+* Enemy names are taken from localized Blizzard text for open kill objectives, including numbered placeholders and simple progress counters such as Forest Wolf: 0/8. Common English plural forms are normalized using a limited mapping, for example Kobold Workers to Kobold Worker. Other NPC names remain unchanged. For collection and kill objectives, unambiguous NPC tooltip mappings are preferred. Without such an observation, collection objectives remain unknown. World objects are not targetable enemies. /quester debug displays the objective text when needed; no external quest database is required.
+* Entries provided by the quest log API are taken into account. Collapsed categories may hide objectives depending on the client. If objectives are missing, expand the categories and run /quester update.
+* The macro is limited to 255 bytes. Excess targets are omitted; /quester status shows how many. Individual icons can still target enemies beyond this limit. Completed objectives free up space again.
+* One free global macro slot is required. Execution always happens through your own key press or click.
+* Grey quests are also selected by default; /quester trivial toggles this behavior. If you manually open the details of a grey quest, automatic acceptance will also apply; holding Shift pauses it.
+* Quests ready for turn-in are opened and completed at the NPC. If there is no choice of reward, or exactly one selectable reward, it is collected automatically. If there are multiple selectable rewards or a monetary cost, manual selection or confirmation is preserved. Holding Shift pauses both acceptance and turn-in.
 
-## Prüfung im Spiel
+In-Game Testing
 
-Questgeber mit mehreren Quests öffnen, Shift-Unterbrechung prüfen, eine Gegnerquest annehmen und das Makro testen. Nach Fortschritt, Abschluss oder Abbruch muss sich der Makrotext anpassen. Im Kampf muss der Text unverändert bleiben und nach Kampfende aktualisiert werden. `/console scriptErrors 1` aktiviert Lua-Fehleranzeigen.
+Open a quest giver with multiple quests, test the Shift interruption, accept an enemy quest, and test the macro. After progress, completion, or abandonment, the macro text should update accordingly. During combat, the text must remain unchanged and update once combat ends. /console scriptErrors 1 enables Lua error messages.
 
-API-Referenz: [Blizzard QuestLog-Dokumentation](https://github.com/Gethe/wow-ui-source/blob/classic_beta/Interface/AddOns/Blizzard_APIDocumentationGenerated/QuestLogDocumentation.lua) und [GossipInfo-Dokumentation](https://github.com/Gethe/wow-ui-source/blob/classic_beta/Interface/AddOns/Blizzard_APIDocumentationGenerated/GossipInfoDocumentation.lua), als Spiegel des Blizzard-UI-Quellcodes.
+API reference: Blizzard QuestLog documentation and GossipInfo documentation, mirrored from Blizzard’s UI source code.
 
-Die Icons verwenden geschützte WoW-Aktionsbuttons. Im Kampf bleiben die bestehenden Icons anklickbar; Änderungen an Zielen, Position oder Sichtbarkeit erfolgen erst danach. Makro und Icons teilen dieselbe Namenserkennung. Ohne Gegnerziele bleibt nur der kleine Griff sichtbar. Die Symbole sind nummerierte Ziel-Icons, keine NPC-Porträts.
+The icons use protected WoW action buttons. During combat, existing icons remain clickable; changes to targets, position, or visibility are applied only afterwards. The macro and icons use the same name detection logic. If there are no enemy objectives, only the small handle remains visible. The symbols are numbered target icons, not NPC portraits.
 
-## Diagnose für Sammelquest-Gegner
+Diagnostics for Collection Quest Enemies
 
-Nach `/reload` einen möglichen Beutegegner einer offenen Sammelquest anvisieren und `/quester inspect` ausführen. Den markierten Bericht mit Strg+C beziehungsweise Cmd+C kopieren. Das Diagnosefenster öffnet sich ausschließlich auf diesen Befehl; Escape schließt es.
+After /reload, target a possible loot enemy for an open collection quest and run /quester inspect. Copy the highlighted report with Ctrl+C or Cmd+C. The diagnostic window opens only through this command; Escape closes it.
 
-Der Bericht enthält Client-Build, Sprache, NPC-Name und NPC-ID, rohe Tooltip-Zeilen einschließlich unbekannter Beta-Felder, Questlog-Ziele und verfügbare Quest-Kartendaten. Fehlende oder fehlschlagende APIs werden kenntlich gemacht. Ohne moderne Tooltip-API wird ein separater Tooltip zum Auslesen verwendet. Bei noch nicht geladenen Zieltexten nach kurzem Darüberfahren erneut prüfen.
+The report contains the client build, language, NPC name and NPC ID, raw tooltip lines including unknown beta fields, quest log objectives, and available quest map data. Missing or failing APIs are marked accordingly. If no modern tooltip API is available, a separate tooltip is used for reading the data. If objective text has not yet loaded, briefly mouse over the NPC and try again.
 
-Die Diagnose-Momentaufnahme bleibt nur bis zum Reload im Speicher. Die automatische Tooltip-Erkennung läuft unabhängig vom Diagnosefenster.
+The diagnostic snapshot remains in memory only until the next reload. Automatic tooltip detection runs independently of the diagnostic window.
 
-## Gelernte Questziele
+Learned Quest Targets
 
-Quester beobachtet Zielwechsel und Mouseover. Im Forever-Tooltip verknüpft eine Questüberschrift (Typ 17, Quest-ID) die folgenden Zielzeilen (Typ 8) mit einer Quest. Eine Zuordnung wird nur gespeichert, wenn genau ein offenes Sammel- oder Tötungsziel dieser aktiven Quest nach Entfernen des Fortschrittszählers zum Tooltiptext passt. Der NPC muss angreifbar sein; sein tatsächlicher Name und seine NPC-ID werden verwendet.
+Quester monitors target changes and mouseover units. In the Forever Tooltip, a quest heading (type 17, quest ID) links the following objective lines (type 8) to a quest. A mapping is stored only if exactly one open collection or kill objective from that active quest matches the tooltip text after removing the progress counter. The NPC must be attackable; its actual name and NPC ID are used.
 
-Die Zuordnungen werden accountweit in `QuesterDB.learnedTargets` nach Client-Build und Sprache getrennt gespeichert. Mehrere NPC-Arten je Ziel sind möglich. Erledigte oder abgebrochene Quests liefern keine aktiven Makroziele mehr; die Zuordnung bleibt für eine erneute Annahme bzw. andere Charaktere gespeichert. Bei neuen Beta-Builds wird neu gelernt.
+Mappings are stored account-wide in QuesterDB.learnedTargets, separated by client build and language. Multiple NPC types can be associated with a single objective. Completed or abandoned quests no longer provide active macro targets, but the mapping remains stored for future acceptance or for other characters. New beta builds are learned again from scratch.
 
-Es wird die vom Spiel angezeigte Questzugehörigkeit gelernt, keine Dropchance oder vollständige Beutetabelle. Unbekannte NPC-Arten werden erst nach einer Begegnung erkannt. Fehlende, widersprüchliche oder nicht zugängliche Tooltipdaten erzeugen keine Zuordnung. Makro und geschützte Icons aktualisieren sich im Kampf erst nach Kampfende.
+Quester learns the quest association displayed by the game, not drop chances or a complete loot table. Unknown NPC types are recognized only after an encounter. Missing, conflicting, or inaccessible tooltip data does not create a mapping. The macro and protected icons are updated during combat only after combat ends.
 
-Wenn Annahme oder Abgabe ausgeschaltet war: `/quester auto on`, dann den NPC erneut ansprechen. `/quester debug` zeigt zusätzlich die letzte Automationsaktion. Dialogaktionen werden kurz verzögert und beim Schließen oder Wechsel der Quest verworfen.
+If quest acceptance or turn-in was disabled, use /quester auto on, then talk to the NPC again. /quester debug additionally displays the most recent automation action. Dialogue actions are delayed briefly and discarded if the quest window is closed or the active quest changes.
 
-## Schutz vor fehlgeschlagenen Questschleifen
+Protection Against Failed Quest Loops
 
-Meldet der Client nach einer automatischen Aktion ein volles Inventar/Questlog oder ein Gegenstandslimit, hält Quester die Annahme und Abgabe an. Zusätzlich wird dieselbe Aktion für dieselbe Quest ohne bestätigten Erfolg nicht wiederholt. Der Abbruch verwirft wartende Aktionen und meldet sich einmal im Chat.
+If the client reports a full inventory, full quest log, or an item limit after an automatic action, Quester pauses quest acceptance and turn-in. In addition, the same action for the same quest will not be repeated without confirmed success. Cancelling discards pending actions and prints a single notification in chat.
 
-Nach tatsächlicher Entlastung des Inventars (mehr freie Plätze oder weniger Gegenstände) bzw. des Questlogs wird die Sperre automatisch aufgehoben. Ein noch offener Questdialog wird fortgesetzt; bei geschlossenem Dialog genügt das nächste normale Ansprechen des NPCs. Unveränderte Inventar-Events und bloßes Verschieben von Stapeln lösen keinen neuen Versuch aus. Scheitert der Versuch erneut, pausiert Quester bis zur nächsten Entlastung. Im Kampf wird die Fortsetzung bis Kampfende aufgeschoben. `/quester resume` bleibt als optionaler manueller Reset verfügbar.
+Once the inventory has actually been relieved — through more free slots or fewer items — or space has been freed in the quest log, the lock is removed automatically. If the quest dialogue is still open, processing continues automatically; if it has been closed, simply talk to the NPC again. Inventory events that do not change available space, and merely rearranging item stacks, do not trigger another attempt. If the action fails again, Quester pauses until space is freed again. During combat, continuation is delayed until combat ends. /quester resume remains available as an optional manual reset.

@@ -134,7 +134,7 @@ local function UpdateMacro()
     local body, included = "/cleartarget", {}
     targetCount, omitted = 0, 0
     for _, name in ipairs(names) do
-        local line = "\n/targetexact " .. name .. "\n/stopmacro [exists,nodead]"
+        local line = "\n/targetexact " .. name .. "\n/tm 8 " .. "\n/stopmacro [exists,nodead]"
         if #body + #line <= 255 then
             body = body .. line
             included[name] = true

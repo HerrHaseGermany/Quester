@@ -131,12 +131,10 @@ local function UpdateMacro()
         NS.Render({}, "Questlog-API nicht verfügbar. Makro unverändert.", {})
         return
     end
-    -- local body, included = "/cleartarget", {}
-    local body, included = "#showtooltip", {}
+    local body, included = "/cleartarget", {}
     targetCount, omitted = 0, 0
     for _, name in ipairs(names) do
-        -- local line = "\n/targetexact " .. name .. "\n/stopmacro [exists,nodead]"
-        local line = "\n/targetexact " .. name .. "\n/stopmacro [noexists]"
+        local line = "\n/targetexact " .. name .. "\n/stopmacro [exists,nodead]"
         if #body + #line <= 255 then
             body = body .. line
             included[name] = true

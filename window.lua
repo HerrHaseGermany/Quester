@@ -1,6 +1,7 @@
 local _, NS = ...
 local window, handle
 local buttons, latestRows = {}, {}
+local itemButtons, latestItems = {}, {}
 local latestStatus = "Questziele werden geladen …"
 local SIZE, GAP, COLUMNS = 30, 4, 8
 local PADDING, GRIP = 8, 12
@@ -18,12 +19,12 @@ end
 
 function NS.ShowWindow()
     QuesterDB.windowHidden = false
-    NS.Render(latestRows, latestStatus)
+    NS.Render(latestRows, latestStatus, nil, nil, latestItems)
 end
 
 function NS.ToggleCollapsed()
     QuesterDB.windowCollapsed = not QuesterDB.windowCollapsed
-    NS.Render(latestRows, latestStatus)
+    NS.Render(latestRows, latestStatus, nil, nil, latestItems)
     GameTooltip:Hide()
 end
 
@@ -76,6 +77,23 @@ function NS.InitWindow()
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
         GameTooltip:SetText("Quester")
         GameTooltip:AddLine(Safe(latestStatus), 1, 1, 1, true)
+        local overview = NS.objectiveOverview
+        if overview then
+            GameTooltip:AddLine(overview.completed .. "/" .. overview.total .. " Questziele abgeschlossen", 1, 0.82, 0.35)
+            local readyQuests = overview.readyQuests or {}
+            GameTooltip:AddLine(#readyQuests .. " Quests abgabebereit", 0.3, 1, 0.3)
+            for _, quest in ipairs(readyQuests) do
+                GameTooltip:AddLine(Safe(quest.title), 0.3, 1, 0.3, true)
+            end
+            if #overview.unknown > 0 then
+                GameTooltip:AddLine("Offene Ziele ohne Gegnerzuordnung:", 1, 0.82, 0.35)
+                for index = 1, math.min(8, #overview.unknown) do
+                    local row = overview.unknown[index]
+                    GameTooltip:AddLine(Safe(row.title .. ": " .. row.text), 1, 1, 1, true)
+                end
+            end
+        end
+        GameTooltip:AddLine("Alle offenen Ziele: /quester objectives", 0.7, 0.7, 0.7)
         local action = QuesterDB.windowCollapsed and "ausklappen" or "einklappen"
         GameTooltip:AddLine("Ziehen: verschieben · Rechtsklick: " .. action, 0.7, 0.7, 0.7)
         if InCombatLockdown() then
@@ -95,13 +113,17 @@ local function NewButton(index)
     button:SetNormalTexture(132212)
     button:SetHighlightTexture("Interface/Buttons/ButtonHilight-Square", "ADD")
     local number = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    number:SetPoint("BOTTOMRIGHT", -2, 2)
+    number:SetPoint("TOPRIGHT", -2, -2)
     number:SetText(index)
+    button.number = number
+    button.progress = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    button.progress:SetPoint("BOTTOM", 0, 2)
     button:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
         GameTooltip:SetText(Safe(self.targetName))
         for _, row in ipairs(self.rows) do
             GameTooltip:AddLine(Safe(row.title), 1, 0.82, 0.35)
+            if row.priority then GameTooltip:AddLine("Priorisierte Quest", 0.4, 1, 0.4) end
             GameTooltip:AddLine(Safe(row.text), 1, 1, 1, true)
         end
         GameTooltip:AddLine("Linksklick: dieses Ziel anvisieren", 0.7, 0.7, 0.7)
@@ -111,8 +133,29 @@ local function NewButton(index)
     return button
 end
 
-function NS.Render(rows, status)
-    latestRows, latestStatus = rows, status
+local function NewItemButton(index)
+    local button = CreateFrame("Button", "QuesterItemButton" .. index, window, "SecureActionButtonTemplate")
+    button:SetSize(SIZE, SIZE)
+    button:RegisterForClicks("AnyDown", "AnyUp")
+    button:SetAttribute("type1", "item")
+    button:SetHighlightTexture("Interface/Buttons/ButtonHilight-Square", "ADD")
+    button.charges = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    button.charges:SetPoint("BOTTOMRIGHT", -2, 2)
+    button:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetHyperlink(self.item.link)
+        for _, quest in ipairs(self.item.quests) do
+            GameTooltip:AddLine(Safe(quest.title), 1, 0.82, 0.35)
+        end
+        GameTooltip:AddLine("Linksklick: Questgegenstand benutzen", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    return button
+end
+
+function NS.Render(rows, status, _, _, items)
+    latestRows, latestStatus, latestItems = rows, status, items or {}
     -- The parent of secure buttons is protected too: defer all layout/visibility changes.
     if InCombatLockdown() then return end
     NS.InitWindow()
@@ -131,6 +174,20 @@ function NS.Render(rows, status)
         local button = buttons[index] or NewButton(index)
         buttons[index] = button
         button.targetName, button.rows = target.name, target.rows
+        local fulfilled, required, priority = 0, 0, false
+        local seen = {}
+        for _, row in ipairs(target.rows) do
+            priority = priority or row.priority
+            local key = row.objective or row
+            if not seen[key] and type(row.fulfilled) == "number"
+                and type(row.required) == "number" and row.required > 0 then
+                seen[key] = true
+                fulfilled = fulfilled + row.fulfilled
+                required = required + row.required
+            end
+        end
+        button.number:SetText((priority and "*" or "") .. index)
+        button.progress:SetText(required > 0 and (fulfilled .. "/" .. required) or "")
         button:SetAttribute("macrotext1", "/cleartarget\n/targetexact " .. target.name)
         button:ClearAllPoints()
         button:SetPoint("TOPLEFT", PADDING + GRIP + GAP + ((index - 1) % COLUMNS) * (SIZE + GAP),
@@ -141,7 +198,25 @@ function NS.Render(rows, status)
         buttons[index]:SetAttribute("macrotext1", nil)
         buttons[index]:Hide()
     end
-    local visibleCount = QuesterDB.windowCollapsed and 0 or #targets
+    for index, item in ipairs(latestItems) do
+        local button = itemButtons[index] or NewItemButton(index)
+        itemButtons[index] = button
+        button.item = item
+        button:SetAttribute("item1", "item:" .. item.id)
+        button:SetNormalTexture(item.texture or 134400)
+        button.charges:SetText(type(item.charges) == "number" and item.charges > 1 and item.charges or "")
+        local slot = #targets + index - 1
+        button:ClearAllPoints()
+        button:SetPoint("TOPLEFT", PADDING + GRIP + GAP + (slot % COLUMNS) * (SIZE + GAP),
+            -PADDING - math.floor(slot / COLUMNS) * (SIZE + GAP))
+        if QuesterDB.windowCollapsed then button:Hide() else button:Show() end
+    end
+    for index = #latestItems + 1, #itemButtons do
+        itemButtons[index]:SetAttribute("item1", nil)
+        itemButtons[index].item = nil
+        itemButtons[index]:Hide()
+    end
+    local visibleCount = QuesterDB.windowCollapsed and 0 or (#targets + #latestItems)
     local columns = math.min(visibleCount, COLUMNS)
     window:SetSize(PADDING * 2 + GRIP + columns * (SIZE + GAP),
         PADDING * 2 + math.max(1, math.ceil(visibleCount / COLUMNS)) * (SIZE + GAP) - GAP)

@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: |cffffff00Quester|r 
-## Notes: Lightweight Questhelper.
+## Notes: Questhelper
 ## Author: Hase
-## Version: 0.5.3
+## Version: 0.6.0
 ## SavedVariables: QuesterDB
 ## IconTexture: Interface/AddOns/Quester/Media/logo.blp
 
@@ -10,4 +10,8 @@ window.lua
 inspect.lua
 learning.lua
 automation.lua
+itemtooltips.lua
+maps.lua
+maps.xml
+settings.lua
 quester.lua

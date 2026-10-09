@@ -5,8 +5,168 @@ local attempts = {}
 local attemptState, blockedState
 local Recover
 local function Status(text) NS.lastQuestAction = text end
+local function ExceptionTables()
+    if type(QuesterDB.automationExceptions) ~= 'table' then QuesterDB.automationExceptions = {} end
+    local exceptions = QuesterDB.automationExceptions
+    for _, kind in ipairs({ 'quest', 'npc', 'item' }) do
+        if type(exceptions[kind]) ~= 'table' then exceptions[kind] = {} end
+    end
+    return exceptions
+end
+local function NPCIdentity()
+    local unit = 'npc'
+    local guid = UnitGUID and UnitGUID(unit)
+    if not guid then unit = 'target'; guid = UnitGUID and UnitGUID(unit) end
+    local kind, id
+    if guid then
+        kind = guid:match('^([^-]+)-')
+        if kind == 'Creature' or kind == 'Vehicle' then
+            id = tonumber(guid:match('^[^-]+%-[^-]+%-[^-]+%-[^-]+%-[^-]+%-(%d+)%-'))
+        else return nil end
+    end
+    return id, UnitName and UnitName(unit)
+end
+local function Excluded(kind, id, title)
+    local entries = ExceptionTables()[kind]
+    id = type(id) == 'number' and id > 0 and id or nil
+    if id and entries[id] then return true end
+    if type(title) ~= 'string' or title == '' then return false end
+    title = title:lower()
+    if entries[title] then return true end
+    -- Legacy greeting APIs may expose only titles, even for saved ID exclusions.
+    if not id then
+        for _, label in pairs(entries) do
+            if type(label) == 'string' and label:lower() == title then return true end
+        end
+    end
+    return false
+end
+
+function NS.HandleExceptionCommand(input, printMessage)
+    local command = input:match('^%s*(.-)%s*$')
+    local lower = command:lower()
+    if lower == 'exceptions' or lower == 'exceptions clear' then
+        local exceptions = ExceptionTables()
+        if lower == 'exceptions clear' then
+            exceptions.quest, exceptions.npc, exceptions.item = {}, {}, {}
+            printMessage('Alle Automatik-Ausnahmen entfernt.')
+        else
+            printMessage('/quester exclude quest|npc|item [ID/Name] | allow quest|npc|item [ID/Name] | exceptions clear')
+            for _, kind in ipairs({ 'quest', 'npc', 'item' }) do
+                for key, label in pairs(exceptions[kind]) do
+                    printMessage(kind .. ': ' .. label .. ' [' .. tostring(key) .. ']')
+                end
+            end
+        end
+        return true
+    end
+    local action, kind, query = lower:match('^(%a+)%s+(%a+)%s*(.-)$')
+    if action ~= 'exclude' and action ~= 'allow' then return false end
+    if kind ~= 'quest' and kind ~= 'npc' and kind ~= 'item' then
+        printMessage('/quester ' .. action .. ' quest|npc|item [ID/Name]'); return true
+    end
+    local entries = ExceptionTables()[kind]
+    local id, title
+    if query == '' then
+        if kind == 'item' then
+            printMessage('Bitte eine Gegenstands-ID oder einen exakten Namen angeben.'); return true
+        end
+        if kind == 'quest' then
+            id, title = GetQuestID and GetQuestID(), GetTitleText and GetTitleText()
+        else id, title = NPCIdentity() end
+    else
+        id = tonumber(query)
+        title = command:match('^%S+%s+%S+%s+(.+)$')
+    end
+    if id and (id <= 0 or id % 1 ~= 0) then
+        printMessage('Bitte eine positive, ganze ID angeben.'); return true
+    end
+    if not id and (not title or title == '') then
+        printMessage('Keine Quest/kein NPC gefunden. Mit Shift öffnen oder ID/Name angeben.'); return true
+    end
+    local key = id or title:lower()
+    if action == 'exclude' then
+        entries[key] = title and title ~= '' and title or tostring(id)
+        printMessage('Automatik-Ausnahme gespeichert: ' .. entries[key])
+    else
+        entries[key] = nil
+        if not id then
+            for savedKey, label in pairs(entries) do
+                if type(label) == 'string' and label:lower() == title:lower() then entries[savedKey] = nil end
+            end
+        end
+        printMessage('Automatik-Ausnahme entfernt: ' .. (title or tostring(id)))
+    end
+    return true
+end
 local function Paused()
     return IsShiftKeyDown() or InCombatLockdown()
+end
+
+function NS.HandleMerchantEvent(event)
+    if event ~= 'MERCHANT_SHOW' then return false end
+    if Paused() or (GetCursorInfo and GetCursorInfo())
+        or not MerchantFrame or not MerchantFrame:IsShown() then return true end
+    if QuesterDB.autoRepair and CanMerchantRepair and CanMerchantRepair()
+        and GetRepairAllCost and GetMoney and RepairAllItems then
+        local cost, needsRepair = GetRepairAllCost()
+        if needsRepair and type(cost) == 'number' and cost > 0 then
+            local function Money(amount)
+                if GetCoinTextureString then return GetCoinTextureString(amount) end
+                return string.format('%dg %ds %dc', math.floor(amount / 10000),
+                    math.floor(amount / 100) % 100, amount % 100)
+            end
+            local gold = GetMoney()
+            local message
+            if gold >= cost then
+                RepairAllItems(false)
+                message = 'Ausrüstung automatisch repariert. Kosten: ' .. Money(cost)
+            else
+                message = 'Nicht genug Gold zum Reparieren. Kosten: ' .. Money(cost)
+                    .. '; fehlend: ' .. Money(cost - gold)
+            end
+            DEFAULT_CHAT_FRAME:AddMessage('|cffffff00Quester:|r ' .. message)
+        end
+    end
+    if not QuesterDB.autoSellGrey then return true end
+    local containers = C_Container or {}
+    local slots = containers.GetContainerNumSlots or GetContainerNumSlots
+    local info = containers.GetContainerItemInfo or GetContainerItemInfo
+    local use = containers.UseContainerItem or UseContainerItem
+    local questInfo = containers.GetContainerItemQuestInfo or GetContainerItemQuestInfo
+    local itemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
+    if not slots or not info or not use or not itemInfo then return true end
+    for bag = 0, (NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4) do
+        for slot = 1, slots(bag) do
+            local item, _, locked, quality, _, _, link, _, noValue, itemID = info(bag, slot)
+            if type(item) == 'table' then
+                locked, quality, link, noValue, itemID = item.isLocked, item.quality,
+                    item.hyperlink, item.hasNoValue, item.itemID
+            end
+            if item and quality == 0 and not locked and not noValue and (itemID or link) then
+                itemID = itemID or (link and tonumber(link:match('item:(%d+)')))
+                local name, _, _, _, _, _, _, _, _, _, price, classID = itemInfo(itemID or link)
+                local isQuestItem, questID
+                if questInfo then
+                    local quest, id = questInfo(bag, slot)
+                    if type(quest) == 'table' then
+                        isQuestItem, questID = quest.isQuestItem, quest.questID
+                    else
+                        isQuestItem, questID = quest, id
+                    end
+                end
+                -- Uncached, valueless, quest-related and explicitly protected items stay in the bags.
+                if name and price and price > 0 and classID ~= 12 and not isQuestItem
+                    and not questID and not Excluded('item', itemID, name) then
+                    if Paused() or not QuesterDB.autoSellGrey
+                        or (GetCursorInfo and GetCursorInfo())
+                        or not MerchantFrame or not MerchantFrame:IsShown() then return true end
+                    use(bag, slot)
+                end
+            end
+        end
+    end
+    return true
 end
 local function ReadResources()
     local state = { items = {}, free = 0 }
@@ -98,10 +258,16 @@ local function Complete(value) return value == true or value == 1 end
 local function Process(event)
     if stopped then return end
     if Paused() then Status('Durch Shift oder Kampf pausiert'); return end
+    local npcID, npcName = NPCIdentity()
+    if Excluded('npc', npcID, npcName) then Status('NPC von Automatik ausgeschlossen'); return end
+    if event ~= 'GOSSIP_SHOW' and event ~= 'QUEST_GREETING'
+        and Excluded('quest', GetQuestID and GetQuestID(), GetTitleText and GetTitleText()) then
+        Status('Quest von Automatik ausgeschlossen'); return
+    end
     if event == 'GOSSIP_SHOW' then
         if QuesterDB.autoTurnIn and C_GossipInfo and C_GossipInfo.GetActiveQuests then
             for _, quest in ipairs(C_GossipInfo.GetActiveQuests() or {}) do
-                if Complete(quest.isComplete) then
+                if Complete(quest.isComplete) and not Excluded('quest', quest.questID, quest.title) then
                     Call('Abgabe öffnen', C_GossipInfo.SelectActiveQuest, quest.questID)
                     return
                 end
@@ -109,7 +275,8 @@ local function Process(event)
         end
         if QuesterDB.autoAccept and C_GossipInfo and C_GossipInfo.GetAvailableQuests then
             for _, quest in ipairs(C_GossipInfo.GetAvailableQuests() or {}) do
-                if not quest.isTrivial or QuesterDB.acceptTrivial then
+                if (not quest.isTrivial or QuesterDB.acceptTrivial)
+                    and not Excluded('quest', quest.questID, quest.title) then
                     Call('Quest öffnen', C_GossipInfo.SelectAvailableQuest, quest.questID)
                     return
                 end
@@ -118,14 +285,18 @@ local function Process(event)
     elseif event == 'QUEST_GREETING' then
         if QuesterDB.autoTurnIn and GetNumActiveQuests and GetActiveTitle then
             for index = 1, GetNumActiveQuests() do
-                local _, finished = GetActiveTitle(index)
-                if Complete(finished) then Call('Abgabe öffnen', SelectActiveQuest, index); return end
+                local title, finished = GetActiveTitle(index)
+                if Complete(finished) and not Excluded('quest', GetActiveQuestID and GetActiveQuestID(index), title) then
+                    Call('Abgabe öffnen', SelectActiveQuest, index); return
+                end
             end
         end
         if QuesterDB.autoAccept and GetNumAvailableQuests and GetAvailableQuestInfo then
             for index = 1, GetNumAvailableQuests() do
                 local trivial = GetAvailableQuestInfo(index)
-                if not trivial or QuesterDB.acceptTrivial then
+                if (not trivial or QuesterDB.acceptTrivial)
+                    and not Excluded('quest', GetAvailableQuestID and GetAvailableQuestID(index),
+                        GetAvailableTitle and GetAvailableTitle(index)) then
                     Call('Quest öffnen', SelectAvailableQuest, index); return
                 end
             end

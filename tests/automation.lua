@@ -173,3 +173,51 @@ GetQuestReward = function() calls[#calls+1]='after-combat' end
 NS.HandleQuestEvent('PLAYER_REGEN_ENABLED'); flush()
 assert(#calls==before+1 and calls[#calls]=='after-combat')
 print('PASS: automatic inventory recovery, unchanged/moved contents, repeat failure, closed dialog and combat deferral')
+
+-- Exceptions protect selection and every transaction stage, including queued actions.
+local npcID, npcName = 123, 'Material Collector'
+function UnitGUID(unit) return unit == 'npc' and ('Creature-0-1-2-3-' .. npcID .. '-00000001') end
+function UnitName(unit) return unit == 'npc' and npcName end
+function GetTitleText() return 'Material Hand-In' end
+local function command(text)
+    assert(NS.HandleExceptionCommand(text, function() end))
+end
+NS.ResumeAutomation()
+command('exclude quest')
+assert(QuesterDB.automationExceptions.quest[questID] == 'Material Hand-In')
+before = #calls
+event('QUEST_DETAIL'); event('QUEST_PROGRESS'); event('QUEST_COMPLETE')
+assert(#calls == before)
+active = {{questID=questID, title='Material Hand-In', isComplete=true}, {questID=555, title='Other Quest', isComplete=true}}
+event('GOSSIP_SHOW'); assert(calls[#calls] == 'active:555')
+NS.ResumeAutomation(); active = {}
+available = {{questID=questID, title='Material Hand-In'}, {questID=556, title='Other Quest'}}
+event('GOSSIP_SHOW'); assert(calls[#calls] == 'available:556')
+-- A name exclusion also protects legacy selection when IDs are unavailable.
+command('exceptions clear'); command('exclude quest Material Hand-In')
+function GetActiveTitle() return 'Material Hand-In', true end
+function GetAvailableTitle() return 'Material Hand-In' end
+NS.ResumeAutomation(); before = #calls
+event('QUEST_GREETING'); assert(#calls == before)
+command('allow quest material hand-in')
+assert(not next(QuesterDB.automationExceptions.quest))
+-- Stored ID labels protect legacy title-only greetings, and can be removed by name.
+command('exclude quest'); before = #calls
+event('QUEST_GREETING'); assert(#calls == before)
+command('allow quest Material Hand-In')
+assert(not next(QuesterDB.automationExceptions.quest))
+-- NPC exclusions cover every dialogue, persist through resume, and use template IDs.
+command('exclude npc')
+assert(QuesterDB.automationExceptions.npc[123] == npcName)
+NS.ResumeAutomation(); before = #calls
+for _, name in ipairs({'GOSSIP_SHOW','QUEST_GREETING','QUEST_DETAIL','QUEST_PROGRESS','QUEST_COMPLETE'}) do event(name) end
+assert(#calls == before)
+command('exceptions'); assert(QuesterDB.automationExceptions.npc[123])
+command('allow npc 123'); event('QUEST_DETAIL'); assert(#calls == before + 1)
+NS.ResumeAutomation(); command('exclude npc material collector'); before = #calls
+event('QUEST_COMPLETE'); assert(#calls == before)
+command('exceptions clear'); NS.ResumeAutomation()
+NS.HandleQuestEvent('QUEST_PROGRESS'); command('exclude quest ' .. questID)
+flush(); assert(#calls == before, 'exceptions added before delayed execution must take effect')
+command('allow quest ' .. questID); event('QUEST_PROGRESS'); assert(#calls == before + 1)
+print('PASS: saved quest/NPC exclusions, ID/name/current dialogue management, legacy fallback, selection skipping and delayed transaction protection')

@@ -109,3 +109,43 @@ assert(not buttons[1].shown and frames.QuesterWindow.shown)
 NS.ToggleCollapsed()
 assert(buttons[1].shown)
 print('PASS: collapse/expand, persistent state across refreshes, combat deferral')
+
+-- Progress sums distinct objectives for one enemy and marks prioritized quests.
+local objective = {}
+local progressRows = {
+    { name = 'Wolf', title = 'Hunt', text = 'Wolf: 2/8', fulfilled = 2, required = 8, objective = objective, priority = true },
+    { name = 'Wolf', title = 'Hunt', text = 'Wolf: 2/8', fulfilled = 2, required = 8, objective = objective },
+    { name = 'Wolf', title = 'Other', text = 'Wolf: 1/3', fulfilled = 1, required = 3 },
+    { name = 'Bear', title = 'Hunt', text = 'Bear' },
+}
+NS.Render(progressRows, 'Progress')
+assert(buttons[1].progress.text == '3/11' and buttons[1].number.text == '*1')
+assert(buttons[2].progress.text == '' and buttons[2].number.text == '2')
+combat = true
+NS.Render({{name = 'Wolf', fulfilled = 9, required = 10}}, 'Combat')
+assert(buttons[1].progress.text == '3/11', 'progress layout deferred in combat')
+combat = false
+NS.Render({{name = 'Wolf', fulfilled = 9, required = 10}}, 'Updated')
+assert(buttons[1].progress.text == '9/10' and buttons[1].number.text == '1')
+print('PASS: numeric progress, objective deduplication, priority marker, unknown counters and combat deferral')
+
+local items = {{ id = 123, link = 'item:123', texture = 456, charges = 3,
+    quests = {{ title = 'Net quest' }} }}
+NS.Render(rows, 'Items', nil, nil, items)
+local itemButton = frames.QuesterItemButton1
+assert(itemButton.attributes.type1 == 'item' and itemButton.attributes.item1 == 'item:123')
+assert(itemButton.shown and itemButton.charges.text == 3 and frames.QuesterWindow.width == 130)
+GameTooltip.SetHyperlink = function(self, link) self.link = link end
+itemButton.scripts.OnEnter(itemButton)
+assert(GameTooltip.link == 'item:123')
+combat = true
+NS.Render({}, 'Combat', nil, nil, {})
+assert(itemButton.shown and itemButton.attributes.item1 == 'item:123')
+combat = false
+NS.ShowWindow()
+assert(not itemButton.shown and not itemButton.attributes.item1)
+NS.Render({}, 'Item only', nil, nil, items)
+assert(itemButton.shown and frames.QuesterWindow.width == 62)
+NS.ToggleCollapsed(); assert(not itemButton.shown)
+NS.ToggleCollapsed(); assert(itemButton.shown and itemButton.attributes.item1 == 'item:123')
+print('PASS: secure item action, tooltip, shared layout, combat deferral, removal and item-only collapse')

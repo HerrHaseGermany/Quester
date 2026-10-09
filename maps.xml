@@ -1,0 +1,10 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Frame name="QuesterMapPinTemplate" inherits="MapCanvasPinTemplate" mixin="QuesterMapPinMixin" virtual="true">
+        <Size x="18" y="18"/>
+        <Scripts>
+            <OnLoad method="OnLoad"/>
+            <OnEnter method="OnEnter"/>
+            <OnLeave method="OnLeave"/>
+        </Scripts>
+    </Frame>
+</Ui>

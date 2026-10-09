@@ -3,6 +3,7 @@ local frame = CreateFrame("Frame")
 local macroName = "QuesterTarget"
 local queued, ready, slotWarning = false, false, false
 local targetCount, omitted = 0, 0
+local questReadiness
 
 local function Print(message)
     DEFAULT_CHAT_FRAME:AddMessage("|cffffff00Quester:|r " .. message)
@@ -64,12 +65,49 @@ local function TargetName(text)
 end
 
 local apiWarning = false
-local function CollectTargets()
+local function QuestKey(questID, title)
+    return type(questID) == "number" and questID > 0 and questID or title
+end
+
+local function CollectTargets(includeHidden)
     local names, seen, rows = {}, {}, {}
-    local function AddObjective(title, text, kind, finished, questID, objective)
+    local items, byItem = {}, {}
+    local quests = {}
+    local function IncludeQuest(questID, title, complete)
+        local key = QuestKey(questID, title)
+        quests[#quests + 1] = { key = key, title = title or "Quest",
+            complete = complete == true or complete == 1 }
+        return includeHidden or not QuesterDB.hiddenQuests[key]
+    end
+    local function AddQuestItem(index, title, questID, complete)
+        -- Forever retains this index-based API alongside C_QuestLog. Feature-test
+        -- it; collection objectives and reward items are not usable quest actions.
+        if not GetQuestLogSpecialItemInfo then return end
+        local link, texture, charges, showWhenComplete = GetQuestLogSpecialItemInfo(index)
+        local itemID = type(link) == "string" and tonumber(link:match("item:(%d+)"))
+        if not itemID or (complete and not showWhenComplete) then return end
+        local getCount = C_Item and C_Item.GetItemCount or GetItemCount
+        if getCount and getCount(itemID) == 0 then return end
+        local item = byItem[itemID]
+        if not item then
+            item = { id = itemID, link = link, texture = texture, charges = charges, quests = {} }
+            byItem[itemID] = item
+            items[#items + 1] = item
+        end
+        item.quests[#item.quests + 1] = { title = title or "Quest", questID = questID }
+    end
+    local function AddObjective(title, text, kind, finished, questID, objective, readyForTurnIn)
+        finished = finished or readyForTurnIn
+        if type(questID) ~= "number" or questID <= 0 then questID = nil end
         objective = objective or { text = text, type = kind, finished = finished }
-        if type(objective.numRequired) == "number" and objective.numRequired > 0
-            and type(objective.numFulfilled) == "number" and objective.numFulfilled >= objective.numRequired then
+        local fulfilled, required = objective.numFulfilled, objective.numRequired
+        if type(fulfilled) ~= "number" or type(required) ~= "number" then
+            local current, total
+            if type(text) == "string" then current, total = text:match("(%d+)%s*/%s*(%d+)") end
+            fulfilled, required = tonumber(current), tonumber(total)
+        end
+        if type(required) == "number" and required > 0
+            and type(fulfilled) == "number" and fulfilled >= required then
             finished = true
         end
         local learned = not finished and NS.GetLearnedTargets(questID, objective) or {}
@@ -81,6 +119,8 @@ local function CollectTargets()
         local function AddRow(name)
             rows[#rows + 1] = { title = title or "Quest", text = text or "Zieltext wird geladen …",
                 kind = kind, finished = finished, name = name, questID = questID,
+                objective = objective, readyForTurnIn = readyForTurnIn,
+                fulfilled = fulfilled, required = required,
                 source = #learned > 0 and "tooltip" or "text" }
             if name and not seen[name] then seen[name] = true; names[#names + 1] = name end
         end
@@ -95,22 +135,34 @@ local function CollectTargets()
             local info = C_QuestLog.GetInfo(index)
             if info and not info.isHeader and not info.isHidden and info.questID
                 and info.questID > 0 then
-                local objectives = C_QuestLog.GetQuestObjectives(info.questID)
-                if not objectives or #objectives == 0 then
-                    rows[#rows + 1] = { title = info.title or "Quest", text = "Keine Zielzeilen von der Quest-API geliefert.", kind = "empty" }
-                end
-                for _, objective in ipairs(objectives or {}) do
-                    AddObjective(info.title, objective.text, objective.type, objective.finished, info.questID, objective)
+                local complete = C_QuestLog.IsComplete and C_QuestLog.IsComplete(info.questID)
+                if IncludeQuest(info.questID, info.title, complete) then
+                    complete = complete == true or complete == 1
+                    AddQuestItem(index, info.title, info.questID, complete)
+                    local objectives = C_QuestLog.GetQuestObjectives(info.questID)
+                    if not objectives or #objectives == 0 then
+                        rows[#rows + 1] = { title = info.title or "Quest", text = "Keine Zielzeilen von der Quest-API geliefert.", kind = "empty", questID = info.questID, readyForTurnIn = complete }
+                    end
+                    for _, objective in ipairs(objectives or {}) do
+                        AddObjective(info.title, objective.text, objective.type, objective.finished, info.questID, objective, complete)
+                    end
                 end
             end
         end
     elseif GetNumQuestLogEntries and GetQuestLogTitle
         and GetNumQuestLeaderBoards and GetQuestLogLeaderBoard then
         for index = 1, GetNumQuestLogEntries() do
-            local title, _, _, header = GetQuestLogTitle(index)
-            if not header then
-                for objective = 1, GetNumQuestLeaderBoards(index) do
-                    AddObjective(title, GetQuestLogLeaderBoard(objective, index))
+            local title, _, _, header, _, complete, _, questID = GetQuestLogTitle(index)
+            if not header and IncludeQuest(questID, title, complete) then
+                complete = complete == true or complete == 1
+                AddQuestItem(index, title, questID, complete)
+                local count = GetNumQuestLeaderBoards(index)
+                if count == 0 then
+                    rows[#rows + 1] = { title = title or "Quest", text = "Keine Zielzeilen von der Quest-API geliefert.", kind = "empty", questID = questID, readyForTurnIn = complete }
+                end
+                for objective = 1, count do
+                    local text, kind, finished = GetQuestLogLeaderBoard(objective, index)
+                    AddObjective(title, text, kind, finished, questID, nil, complete)
                 end
             end
         end
@@ -121,16 +173,77 @@ local function CollectTargets()
         end
         return nil
     end
-    return names, rows
+    local priority = QuesterDB.priorityQuest
+    if type(priority) == "table" then
+        local ordered = {}
+        for _, row in ipairs(rows) do
+            row.priority = (priority.id and row.questID == priority.id)
+                or (not priority.id and row.title == priority.title) or false
+            if row.priority then ordered[#ordered + 1] = row end
+        end
+        for _, row in ipairs(rows) do
+            if not row.priority then ordered[#ordered + 1] = row end
+        end
+        rows = ordered
+        names, seen = {}, {}
+        for _, row in ipairs(rows) do
+            if row.name and not seen[row.name] then
+                seen[row.name] = true
+                names[#names + 1] = row.name
+            end
+        end
+    end
+    return names, rows, items, quests
+end
+
+local function ObjectiveOverview(rows)
+    local overview = { total = 0, completed = 0, pending = {}, unknown = {}, readyQuests = {} }
+    local seen, seenQuests = {}, {}
+    for _, row in ipairs(rows) do
+        local questKey = QuestKey(row.questID, row.title)
+        if row.readyForTurnIn and not seenQuests[questKey] then
+            seenQuests[questKey] = true
+            overview.readyQuests[#overview.readyQuests + 1] = row
+        end
+        local key = row.objective or row
+        if row.kind ~= "empty" and not seen[key] then
+            seen[key] = true
+            overview.total = overview.total + 1
+            if row.finished then
+                overview.completed = overview.completed + 1
+            else
+                overview.pending[#overview.pending + 1] = row
+                if not row.name then overview.unknown[#overview.unknown + 1] = row end
+            end
+        end
+    end
+    return overview
 end
 
 local function UpdateMacro()
     if not ready then return end
-    local names, rows = CollectTargets()
+    local names, rows, items, quests = CollectTargets()
+    if NS.UpdateMapQuests then NS.UpdateMapQuests(quests or {}) end
     if not names then
+        NS.objectiveOverview = nil
         NS.Render({}, "Questlog-API nicht verfügbar. Makro unverändert.", {})
         return
     end
+    local currentReadiness = {}
+    for _, quest in ipairs(quests) do
+        currentReadiness[quest.key] = quest.complete
+        if QuesterDB.notifyReady and quest.complete and questReadiness
+            and not questReadiness[quest.key] then
+            local message = "Quest abgabebereit: " .. quest.title
+            if UIErrorsFrame and UIErrorsFrame.AddMessage then
+                UIErrorsFrame:AddMessage(message, 1, 0.82, 0)
+            else
+                Print(message)
+            end
+        end
+    end
+    questReadiness = currentReadiness
+    NS.objectiveOverview = ObjectiveOverview(rows)
     local body, included = "/cleartarget", {}
     targetCount, omitted = 0, 0
     for _, name in ipairs(names) do
@@ -184,7 +297,7 @@ local function UpdateMacro()
         status = status .. " Keine offenen Gegnernamen erkannt; /quester debug zeigt die Zieltexte."
     end
     NS.lastRows, NS.lastStatus = rows, status
-    NS.Render(rows, status, included, body)
+    NS.Render(rows, status, included, body, items)
 end
 
 local function ScheduleUpdate()
@@ -206,35 +319,131 @@ frame:SetScript("OnEvent", function(_, event, name, ...)
         if QuesterDB.autoTurnIn == nil then QuesterDB.autoTurnIn = true end
         if QuesterDB.acceptTrivial == nil then QuesterDB.acceptTrivial = true end
         if QuesterDB.targetMacro == nil then QuesterDB.targetMacro = true end
+        if QuesterDB.notifyReady == nil then QuesterDB.notifyReady = false end
+        if QuesterDB.autoSellGrey == nil then QuesterDB.autoSellGrey = false end
+        if QuesterDB.autoRepair == nil then QuesterDB.autoRepair = false end
+        if type(QuesterDB.hiddenQuests) ~= "table" then QuesterDB.hiddenQuests = {} end
         ready = true
         NS.InitWindow()
         NS.InitLearning()
-    elseif NS.HandleQuestEvent(event, name, ...) then
-        -- Quest-dialog automation handles its own delayed actions.
+        if NS.InitMaps then NS.InitMaps() end
+        if NS.InitItemTooltips then NS.InitItemTooltips() end
+        if NS.InitSettings then NS.InitSettings() end
     else
-        ScheduleUpdate()
+        if NS.HandleMerchantEvent(event) then return end
+        if NS.HandleMapEvent then NS.HandleMapEvent(event, name, ...) end
+        if NS.HandleQuestEvent(event, name, ...) then
+            -- Quest-dialog automation handles its own delayed actions.
+            if event == "BAG_UPDATE_DELAYED" then ScheduleUpdate() end
+        else
+            ScheduleUpdate()
+        end
     end
 end)
 
 for _, event in ipairs({ "ADDON_LOADED", "PLAYER_LOGIN", "QUEST_DETAIL", "GOSSIP_SHOW",
     "QUEST_GREETING", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED",
-    "PLAYER_REGEN_ENABLED", "UPDATE_MACROS", "QUEST_PROGRESS", "QUEST_COMPLETE", "QUEST_FINISHED", "GOSSIP_CLOSED", "UI_ERROR_MESSAGE", "QUEST_TURNED_IN", "BAG_UPDATE_DELAYED" }) do
+    "PLAYER_REGEN_ENABLED", "UPDATE_MACROS", "QUEST_PROGRESS", "QUEST_COMPLETE", "QUEST_FINISHED", "GOSSIP_CLOSED", "UI_ERROR_MESSAGE", "QUEST_TURNED_IN", "BAG_UPDATE_DELAYED", "MERCHANT_SHOW" }) do
     frame:RegisterEvent(event)
 end
 
 SLASH_QUESTER1 = "/quester"
 SlashCmdList.QUESTER = function(input)
+    if NS.HandleExceptionCommand(input, Print) then return end
     local command = input:lower():match("^%s*(.-)%s*$")
     if command == "" or command == "show" then
         NS.ShowWindow()
         ScheduleUpdate()
+    elseif command == "settings" or command == "options" then
+        NS.OpenSettings()
     elseif command == "hide" then
         NS.HideWindow()
+    elseif command == "hidden" then
+        Print("/quester hide <Questname oder ID> | show <Questname oder ID> | hidden clear")
+        local _, _, _, quests = CollectTargets(true)
+        local active = {}
+        for _, quest in ipairs(quests or {}) do
+            active[quest.key] = true
+            Print((QuesterDB.hiddenQuests[quest.key] and "[ausgeblendet] " or "")
+                .. quest.title .. (type(quest.key) == "number" and " [" .. quest.key .. "]" or ""))
+        end
+        -- Saved exclusions remain manageable after a quest is abandoned.
+        for key, title in pairs(QuesterDB.hiddenQuests) do
+            if not active[key] then
+                Print("[ausgeblendet] " .. title .. (type(key) == "number" and " [" .. key .. "]" or ""))
+            end
+        end
+    elseif command == "hidden clear" then
+        QuesterDB.hiddenQuests = {}
+        ScheduleUpdate()
+        Print("Alle ausgeblendeten Quests wieder eingeblendet.")
+    elseif command:match("^hide%s+") or command:match("^show%s+") then
+        local action, query = command:match("^(%a+)%s+(.+)$")
+        local key, title
+        if action == "show" then
+            for savedKey, savedTitle in pairs(QuesterDB.hiddenQuests) do
+                if tostring(savedKey):lower() == query or savedTitle:lower() == query then
+                    key, title = savedKey, savedTitle
+                    break
+                end
+            end
+        end
+        if not key then
+            local _, _, _, quests = CollectTargets(true)
+            for _, quest in ipairs(quests or {}) do
+                if quest.title:lower() == query or tostring(quest.key):lower() == query then
+                    key, title = quest.key, quest.title
+                    break
+                end
+            end
+        end
+        if not key then Print("Quest nicht gefunden. /quester hidden zeigt verfügbare Quests."); return end
+        QuesterDB.hiddenQuests[key] = action == "hide" and title or nil
+        ScheduleUpdate()
+        Print((action == "hide" and "Quest ausgeblendet: " or "Quest wieder eingeblendet: ") .. title)
     elseif command == "resume" then
         NS.ResumeAutomation()
         Print("Sperre aufgehoben. Questgeber erneut ansprechen.")
     elseif command == "inspect" then
         NS.InspectTarget()
+    elseif command == "objectives" then
+        local _, rows = CollectTargets()
+        if not rows then Print("Questlog-API nicht verfügbar."); return end
+        local overview = ObjectiveOverview(rows)
+        Print(overview.completed .. "/" .. overview.total .. " Questziele abgeschlossen.")
+        for _, row in ipairs(overview.pending) do
+            Print(row.title .. ": " .. row.text)
+        end
+        if #overview.pending == 0 then Print("Keine offenen Questziele.") end
+    elseif command == "priority clear" then
+        QuesterDB.priorityQuest = nil
+        ScheduleUpdate()
+        Print("Questpriorität aufgehoben.")
+    elseif command == "priority" or command:match("^priority%s+") then
+        local _, rows = CollectTargets()
+        if not rows then Print("Questlog-API nicht verfügbar."); return end
+        local query = command:match("^priority%s+(.+)$")
+        if query then
+            for _, row in ipairs(rows) do
+                if row.title:lower() == query or (row.questID and tostring(row.questID) == query) then
+                    QuesterDB.priorityQuest = { id = row.questID and row.questID > 0 and row.questID or nil, title = row.title }
+                    ScheduleUpdate()
+                    Print("Priorisierte Quest: " .. row.title)
+                    return
+                end
+            end
+            Print("Quest nicht gefunden. /quester priority zeigt verfügbare Quests.")
+        else
+            Print("/quester priority <Questname oder ID> | priority clear")
+            local seen = {}
+            for _, row in ipairs(rows) do
+                local key = row.questID or row.title
+                if not seen[key] then
+                    seen[key] = true
+                    Print((row.priority and "* " or "") .. row.title .. (row.questID and " [" .. row.questID .. "]" or ""))
+                end
+            end
+        end
     elseif command == "debug" then
         Print(NS.lastStatus or "Noch keine Questdaten.")
         Print(NS.lastQuestAction or "Noch keine Questinteraktion.")
@@ -253,6 +462,18 @@ SlashCmdList.QUESTER = function(input)
         QuesterDB.targetMacro = not QuesterDB.targetMacro
         Print("Makro-Aktualisierung: " .. (QuesterDB.targetMacro and "an" or "aus"))
         ScheduleUpdate()
+    elseif command == "notify" or command == "notify on" or command == "notify off" then
+        QuesterDB.notifyReady = command == "notify on"
+            or (command == "notify" and not QuesterDB.notifyReady)
+        Print("Meldung bei abgabebereiten Quests: " .. (QuesterDB.notifyReady and "an" or "aus"))
+    elseif command == "sell" or command == "sell on" or command == "sell off" then
+        QuesterDB.autoSellGrey = command == "sell on"
+            or (command == "sell" and not QuesterDB.autoSellGrey)
+        Print("Graue Gegenstände automatisch verkaufen: " .. (QuesterDB.autoSellGrey and "an" or "aus"))
+    elseif command == "repair" or command == "repair on" or command == "repair off" then
+        QuesterDB.autoRepair = command == "repair on"
+            or (command == "repair" and not QuesterDB.autoRepair)
+        Print("Ausrüstung automatisch reparieren: " .. (QuesterDB.autoRepair and "an" or "aus"))
     elseif command == "trivial" then
         QuesterDB.acceptTrivial = not QuesterDB.acceptTrivial
         Print("Graue Quests im Dialog auswählen: " .. (QuesterDB.acceptTrivial and "an" or "aus"))
@@ -260,7 +481,7 @@ SlashCmdList.QUESTER = function(input)
         ScheduleUpdate()
         Print(InCombatLockdown() and "Aktualisierung nach Kampfende vorgemerkt." or "Aktualisierung angefordert.")
     else
-        Print("/quester show | hide | inspect | debug | resume | auto [on/off] | turnin | macro | trivial | update")
+        Print("/quester settings | show [Questname/ID] | hide [Questname/ID] | hidden [clear] | exclude quest/npc/item [ID/Name] | allow quest/npc/item [ID/Name] | exceptions [clear] | objectives | priority [Questname/ID/clear] | inspect | debug | resume | auto [on/off] | turnin | macro | notify [on/off] | sell [on/off] | repair [on/off] | trivial | update")
         Print("Questannahme: " .. (QuesterDB.autoAccept and "an" or "aus")
             .. "; Abgabe: " .. (QuesterDB.autoTurnIn and "an" or "aus")
             .. "; Makro: " .. (QuesterDB.targetMacro and "an" or "aus")

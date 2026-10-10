@@ -78,11 +78,11 @@ local function AddItemQuests(tooltip)
     local namedQuests = byName[ItemName(name)]
     if not quests and not namedQuests then return end
     tooltip.QuesterItemQuests = true
-    tooltip:AddLine("Quester · Aktive Quests", 1, 0.82, 0.35)
+    tooltip:AddLine("Quester · Active quests", 1, 0.82, 0.35)
     local function Append(entries)
         for _, quest in ipairs(entries or {}) do
             local text = quest.title
-            if quest.remaining ~= nil then text = text .. " — Noch benötigt: " .. quest.remaining end
+            if quest.remaining ~= nil then text = text .. " — Still needed: " .. quest.remaining end
             tooltip:AddLine(text, 1, 1, 1, true)
         end
     end

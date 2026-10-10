@@ -44,7 +44,7 @@ local rows = {
     { title = 'Hunt', text = 'Fell: 0/8', kind = 'item' },
     { title = 'Hunt', text = 'Bear: 1/1', name = 'Bear', finished = true },
 }
-NS.Render(rows, '2 Ziele')
+NS.Render(rows, '2 targets')
 assert(#buttons == 2, 'one icon per distinct unfinished target')
 assert(frames.QuesterWindow.width == 96 and frames.QuesterWindow.height == 46)
 assert(buttons[1].attributes.type1 == 'macro')
@@ -53,7 +53,7 @@ assert(#buttons[1].rows == 2)
 NS.HideWindow(); assert(not frames.QuesterWindow.shown and QuesterDB.windowHidden)
 NS.ShowWindow(); assert(frames.QuesterWindow.shown and not QuesterDB.windowHidden)
 combat = true
-NS.Render({}, 'Im Kampf')
+NS.Render({}, 'In combat')
 NS.HideWindow()
 assert(frames.QuesterWindow.shown and buttons[1].shown)
 assert(buttons[1].attributes.macrotext1:find('Kobold Worker', 1, true))
@@ -64,7 +64,7 @@ assert(not buttons[1].shown and not buttons[1].attributes.macrotext1)
 NS.ShowWindow(); assert(frames.QuesterWindow.width == 28)
 local many = {}
 for index = 1, 10 do many[index] = { name = 'Mob' .. index } end
-NS.Render(many, '10 Ziele')
+NS.Render(many, '10 targets')
 assert(frames.QuesterWindow.width == 300 and frames.QuesterWindow.height == 80)
 print('PASS: compact dimensions, deduplicated icons, secure clicks, combat deferral, visibility and wrapping')
 
@@ -95,7 +95,7 @@ print('PASS: tooltip hover passes one string, including escaped pipes')
 NS.ToggleCollapsed()
 assert(QuesterDB.windowCollapsed and frames.QuesterWindow.shown)
 assert(frames.QuesterWindow.width == 28 and not buttons[1].shown)
-NS.Render(rows, '2 Ziele')
+NS.Render(rows, '2 targets')
 assert(frames.QuesterWindow.width == 28 and not buttons[1].shown)
 NS.ToggleCollapsed()
 assert(not QuesterDB.windowCollapsed and buttons[1].shown)
@@ -104,7 +104,7 @@ combat = true
 NS.ToggleCollapsed()
 assert(buttons[1].shown and frames.QuesterWindow.width == 96)
 combat = false
-NS.Render(rows, '2 Ziele')
+NS.Render(rows, '2 targets')
 assert(not buttons[1].shown and frames.QuesterWindow.shown)
 NS.ToggleCollapsed()
 assert(buttons[1].shown)

@@ -12,7 +12,7 @@ function NS.InitSettings()
     title:SetText("Quester")
     local subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     subtitle:SetPoint("TOPLEFT", 16, -42)
-    subtitle:SetText("Änderungen werden sofort accountweit gespeichert. Shift pausiert die Automatik.")
+    subtitle:SetText("Changes are saved immediately account-wide. Hold Shift to pause automation.")
 
     local scroll = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 16, -66)
@@ -54,39 +54,39 @@ function NS.InitSettings()
     end
     local function Resume(enabled) if enabled then NS.ResumeAutomation() end end
     Text("Quests", "GameFontNormal")
-    Check("autoAccept", "Quests automatisch annehmen",
-        "Nimmt Quests automatisch an. Quest- und NPC-Ausnahmen werden berücksichtigt.", Resume)
-    Check("autoTurnIn", "Quests automatisch abgeben",
-        "Gibt fertige Quests ab. Mehrere Belohnungen und Quests mit Geldkosten bleiben zur manuellen Auswahl offen.", Resume)
-    Check("acceptTrivial", "Graue Quests im Dialog auswählen",
-        "Wählt auch niedrigstufige Quests aus. Bereits geöffnete Questdetails folgen der automatischen Questannahme.")
-    Check("notifyReady", "Abgabebereite Quests melden",
-        "Zeigt eine Meldung, sobald eine Quest abgabebereit wird.")
+    Check("autoAccept", "Automatically accept quests",
+        "Automatically accepts quests, respecting quest and NPC exceptions.", Resume)
+    Check("autoTurnIn", "Automatically turn in quests",
+        "Turns in completed quests. Multiple reward choices and quests with monetary costs require manual selection or confirmation.", Resume)
+    Check("acceptTrivial", "Select trivial quests in dialogues",
+        "Also selects low-level quests. Quest details already open follow the automatic acceptance setting.")
+    Check("notifyReady", "Notify when quests are ready for turn-in",
+        "Shows a message when a quest becomes ready for turn-in.")
 
     y = y + 12
-    Text("Händler", "GameFontNormal")
-    Check("autoSellGrey", "Graue Gegenstände automatisch verkaufen",
-        "Verkauft graue Gegenstände mit bekanntem Verkaufspreis. Gesperrte, geschützte und Questgegenstände bleiben erhalten.")
-    Check("autoRepair", "Ausrüstung automatisch reparieren",
-        "Repariert mit eigenem Gold und meldet Kosten oder fehlendes Gold im Chat. Händlerautomatik pausiert bei Shift und im Kampf.")
+    Text("Merchants", "GameFontNormal")
+    Check("autoSellGrey", "Automatically sell grey items",
+        "Sells grey items with a known vendor price. Locked, protected and quest items are kept.")
+    Check("autoRepair", "Automatically repair equipment",
+        "Repairs using your own gold and reports costs or insufficient gold in chat. Merchant automation pauses while holding Shift or during combat.")
 
     y = y + 12
-    Text("Makro und Questfenster", "GameFontNormal")
-    Check("targetMacro", "Zielmakro automatisch aktualisieren",
-        "Aktualisiert das Makro QuesterTarget für offene Questziele. Änderungen im Kampf werden vorgemerkt.", NS.Refresh)
-    Check("windowHidden", "Questfenster anzeigen",
-        "Zeigt das Fenster mit Questzielen und verwendbaren Questgegenständen.", function(enabled)
+    Text("Macro and quest window", "GameFontNormal")
+    Check("targetMacro", "Automatically update the target macro",
+        "Updates the QuesterTarget macro for unfinished quest objectives. Changes during combat are deferred.", NS.Refresh)
+    Check("windowHidden", "Show quest window",
+        "Shows the window with quest targets and usable quest items.", function(enabled)
             if enabled then NS.ShowWindow() else NS.HideWindow() end
             NS.Refresh()
         end, true)
-    Check("windowCollapsed", "Questfenster einklappen",
-        "Blendet Ziel- und Gegenstandsschaltflächen aus; der Fenstergriff bleibt sichtbar.", function()
+    Check("windowCollapsed", "Collapse quest window",
+        "Hides target and item buttons while keeping the window handle visible.", function()
             NS.Refresh()
         end)
 
     y = y + 12
-    Text("Questpriorität und ausgeblendete Quests", "GameFontNormal")
-    Text("Questname oder ID eingeben. Ausgeblendete Quests erscheinen nicht im Zielmakro oder Questfenster.")
+    Text("Quest priority and hidden quests", "GameFontNormal")
+    Text("Enter a quest name or ID. Hidden quests are excluded from the target macro and quest window.")
     local updates = {}
     local function Sync()
         for _, entry in ipairs(checks) do
@@ -126,26 +126,26 @@ function NS.InitSettings()
         end
         y = y + 34
     end
-    InputRow("Questname / ID", {
-        { "Priorisieren", "priority" }, { "Ausblenden", "hide" }, { "Einblenden", "show" },
+    InputRow("Quest name / ID", {
+        { "Prioritize", "priority" }, { "Hide", "hide" }, { "Show", "show" },
     })
     local questStatus = Text("")
     updates[#updates + 1] = function()
         local count = 0
         for _ in pairs(QuesterDB.hiddenQuests or {}) do count = count + 1 end
-        questStatus:SetText("Priorität: " .. (QuesterDB.priorityQuest and QuesterDB.priorityQuest.title or "keine")
-            .. " · Ausgeblendete Quests: " .. count)
+        questStatus:SetText("Priority: " .. (QuesterDB.priorityQuest and QuesterDB.priorityQuest.title or "none")
+            .. " · Hidden quests: " .. count)
     end
-    Button("Priorität aufheben", 0, 170, function() Run("priority clear") end)
-    Button("Alle Quests einblenden", 180, 190, function() Run("hidden clear") end)
-    Button("Liste im Chat", 380, 140, function() Run("hidden") end)
+    Button("Clear priority", 0, 170, function() Run("priority clear") end)
+    Button("Show all quests", 180, 190, function() Run("hidden clear") end)
+    Button("List in chat", 380, 140, function() Run("hidden") end)
     y = y + 46
 
-    Text("Automatik-Ausnahmen", "GameFontNormal")
-    Text("Exakten Namen oder ID eingeben. Quest- und NPC-Ausnahmen pausieren die Questautomatik; Gegenstandsausnahmen schützen vor Verkauf.")
-    for _, entry in ipairs({ { "quest", "Quest" }, { "npc", "NPC" }, { "item", "Gegenstand" } }) do
-        InputRow(entry[2] .. " – Name / ID", {
-            { "Ausschließen", "exclude " .. entry[1] }, { "Zulassen", "allow " .. entry[1] },
+    Text("Automation exceptions", "GameFontNormal")
+    Text("Enter an exact name or ID. Quest and NPC exceptions pause quest automation; item exceptions prevent selling.")
+    for _, entry in ipairs({ { "quest", "Quest" }, { "npc", "NPC" }, { "item", "Item" } }) do
+        InputRow(entry[2] .. " – name / ID", {
+            { "Exclude", "exclude " .. entry[1] }, { "Allow", "allow " .. entry[1] },
         })
     end
     local exceptionStatus = Text("")
@@ -156,21 +156,21 @@ function NS.InitSettings()
             for _ in pairs((QuesterDB.automationExceptions or {})[kind] or {}) do count = count + 1 end
             counts[#counts + 1] = count
         end
-        exceptionStatus:SetText("Ausnahmen: " .. counts[1] .. " Quests · " .. counts[2]
-            .. " NPCs · " .. counts[3] .. " Gegenstände")
+        exceptionStatus:SetText("Exceptions: " .. counts[1] .. " Quests · " .. counts[2]
+            .. " NPCs · " .. counts[3] .. " items")
     end
-    Button("Ausnahmen im Chat", 0, 180, function() Run("exceptions") end)
-    Button("Alle Ausnahmen entfernen", 190, 220, function() Run("exceptions clear") end)
+    Button("List exceptions in chat", 0, 180, function() Run("exceptions") end)
+    Button("Clear all exceptions", 190, 220, function() Run("exceptions clear") end)
     y = y + 46
 
-    Text("Weitere Funktionen", "GameFontNormal")
-    Text("Gelernte Questziele, Kartenmarkierungen und Questinformationen in Gegenstandstooltips sind automatisch aktiv.")
-    Button("Automatik fortsetzen", 0, 180, function() Run("resume") end)
-    Button("Ziel untersuchen", 190, 155, function() Run("inspect") end)
-    Button("Questziele im Chat", 355, 165, function() Run("objectives") end)
+    Text("Other features", "GameFontNormal")
+    Text("Learned quest targets, map markers and quest information in item tooltips are automatically enabled.")
+    Button("Resume automation", 0, 180, function() Run("resume") end)
+    Button("Inspect target", 190, 155, function() Run("inspect") end)
+    Button("List objectives in chat", 355, 165, function() Run("objectives") end)
     y = y + 36
-    Button("Diagnose im Chat", 0, 180, function() Run("debug") end)
-    Button("Jetzt aktualisieren", 190, 155, function() Run("update") end)
+    Button("Diagnostics in chat", 0, 180, function() Run("debug") end)
+    Button("Update now", 190, 155, function() Run("update") end)
     content:SetHeight(y + 40)
     panel:SetScript("OnShow", Sync)
 

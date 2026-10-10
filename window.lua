@@ -2,7 +2,7 @@ local _, NS = ...
 local window, handle
 local buttons, latestRows = {}, {}
 local itemButtons, latestItems = {}, {}
-local latestStatus = "Questziele werden geladen …"
+local latestStatus = "Loading quest objectives …"
 local SIZE, GAP, COLUMNS = 30, 4, 8
 local PADDING, GRIP = 8, 12
 
@@ -79,25 +79,25 @@ function NS.InitWindow()
         GameTooltip:AddLine(Safe(latestStatus), 1, 1, 1, true)
         local overview = NS.objectiveOverview
         if overview then
-            GameTooltip:AddLine(overview.completed .. "/" .. overview.total .. " Questziele abgeschlossen", 1, 0.82, 0.35)
+            GameTooltip:AddLine(overview.completed .. "/" .. overview.total .. " quest objectives completed", 1, 0.82, 0.35)
             local readyQuests = overview.readyQuests or {}
-            GameTooltip:AddLine(#readyQuests .. " Quests abgabebereit", 0.3, 1, 0.3)
+            GameTooltip:AddLine(#readyQuests .. " quests ready for turn-in", 0.3, 1, 0.3)
             for _, quest in ipairs(readyQuests) do
                 GameTooltip:AddLine(Safe(quest.title), 0.3, 1, 0.3, true)
             end
             if #overview.unknown > 0 then
-                GameTooltip:AddLine("Offene Ziele ohne Gegnerzuordnung:", 1, 0.82, 0.35)
+                GameTooltip:AddLine("Unfinished objectives without a detected enemy:", 1, 0.82, 0.35)
                 for index = 1, math.min(8, #overview.unknown) do
                     local row = overview.unknown[index]
                     GameTooltip:AddLine(Safe(row.title .. ": " .. row.text), 1, 1, 1, true)
                 end
             end
         end
-        GameTooltip:AddLine("Alle offenen Ziele: /quester objectives", 0.7, 0.7, 0.7)
-        local action = QuesterDB.windowCollapsed and "ausklappen" or "einklappen"
-        GameTooltip:AddLine("Ziehen: verschieben · Rechtsklick: " .. action, 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("All unfinished objectives: /quester objectives", 0.7, 0.7, 0.7)
+        local action = QuesterDB.windowCollapsed and "expand" or "collapse"
+        GameTooltip:AddLine("Drag to move · Right-click to " .. action, 0.7, 0.7, 0.7)
         if InCombatLockdown() then
-            GameTooltip:AddLine("Änderungen werden nach Kampfende angewendet.", 0.7, 0.7, 0.7)
+            GameTooltip:AddLine("Changes will be applied after combat ends.", 0.7, 0.7, 0.7)
         end
         GameTooltip:Show()
     end)
@@ -123,10 +123,10 @@ local function NewButton(index)
         GameTooltip:SetText(Safe(self.targetName))
         for _, row in ipairs(self.rows) do
             GameTooltip:AddLine(Safe(row.title), 1, 0.82, 0.35)
-            if row.priority then GameTooltip:AddLine("Priorisierte Quest", 0.4, 1, 0.4) end
+            if row.priority then GameTooltip:AddLine("Prioritized quest", 0.4, 1, 0.4) end
             GameTooltip:AddLine(Safe(row.text), 1, 1, 1, true)
         end
-        GameTooltip:AddLine("Linksklick: dieses Ziel anvisieren", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Left-click to target this enemy", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -147,7 +147,7 @@ local function NewItemButton(index)
         for _, quest in ipairs(self.item.quests) do
             GameTooltip:AddLine(Safe(quest.title), 1, 0.82, 0.35)
         end
-        GameTooltip:AddLine("Linksklick: Questgegenstand benutzen", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Left-click to use this quest item", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)

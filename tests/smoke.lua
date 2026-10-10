@@ -77,6 +77,7 @@ combat = true; objectives[1][3] = true
 event('QUEST_LOG_UPDATE'); flush(); assert(edits == 0)
 combat = false; event('PLAYER_REGEN_ENABLED'); flush()
 assert(macros[1].body == '#showtooltip')
+-- German game data verifies localized input support; addon messages remain English.
 QUEST_MONSTERS_KILLED = '%s getötet: %d/%d'
 objectives = {{ 'Wölfin getötet: 0/2', 'monster', false },
               { 'Wölfin getötet: 0/2', 'monster', false },
@@ -143,7 +144,7 @@ C_QuestLog.GetQuestObjectives = function() return {
 event('QUEST_LOG_UPDATE'); flush()
 assert(macros[1].body:find('/targetexact Bär', 1, true))
 SlashCmdList.QUESTER('macro'); flush()
-assert(#rendered == 1 and renderStatus:find('aus', 1, true))
+assert(#rendered == 1 and renderStatus:find('off', 1, true))
 SlashCmdList.QUESTER(''); assert(windowShown)
 SlashCmdList.QUESTER('hide'); assert(not windowShown)
 -- A full global macro bank must retain the old character copy.
@@ -153,7 +154,7 @@ for i = 1, 120 do macros[i] = { name = 'Other' .. i, body = 'untouched' } end
 characterMacros = {{ name = 'QuesterTarget', body = 'old' }}
 flush()
 assert(#characterMacros == 1 and #macros == 120)
-assert(renderStatus:find('Kein freier globaler', 1, true))
+assert(renderStatus:find('No free global', 1, true))
 print('PASS: global migration, full account slots, bare counters, positional formats, colors, diagnostic rows, window commands')
 
 -- Actual reported regression: plural objective versus singular NPC name.

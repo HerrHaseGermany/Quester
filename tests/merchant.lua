@@ -74,8 +74,8 @@ repairVendor=false; NS.HandleMerchantEvent('MERCHANT_SHOW'); repairVendor=true
 damaged=false; NS.HandleMerchantEvent('MERCHANT_SHOW'); damaged=true
 assert(repairs == 0 and #messages == 0)
 NS.HandleMerchantEvent('MERCHANT_SHOW')
-assert(repairs == 1 and messages[1]:find('Kosten: 1g 23s 45c', 1, true))
+assert(repairs == 1 and messages[1]:find('Cost: 1g 23s 45c', 1, true))
 gold=12000; NS.HandleMerchantEvent('MERCHANT_SHOW')
-assert(repairs == 1 and messages[2]:find('Nicht genug Gold', 1, true)
-    and messages[2]:find('fehlend: 0g 3s 45c', 1, true))
+assert(repairs == 1 and messages[2]:find('Not enough gold', 1, true)
+    and messages[2]:find('shortfall: 0g 3s 45c', 1, true))
 print('PASS: optional personal-gold repairs, Shift/combat, vendor checks, undamaged equipment, costs and insufficient gold')

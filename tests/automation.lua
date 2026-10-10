@@ -67,7 +67,7 @@ function SelectAvailableQuest(i) calls[#calls+1]='legacy-available:'..i end
 QuesterDB.autoTurnIn=true; event('QUEST_GREETING'); assert(calls[#calls]=='legacy-active:2')
 QuesterDB.autoTurnIn=false; event('QUEST_GREETING'); assert(calls[#calls]=='legacy-available:1')
 NS.ResumeAutomation()
-AcceptQuest=nil; event('QUEST_DETAIL'); assert(NS.lastQuestAction:find('API fehlt',1,true))
+AcceptQuest=nil; event('QUEST_DETAIL'); assert(NS.lastQuestAction:find('API unavailable',1,true))
 assert(not NS.HandleQuestEvent('QUEST_LOG_UPDATE'))
 print('PASS: deferred acceptance, gossip/legacy selection, turn-in stages, 0/1/multiple rewards, cost confirmation, Shift/combat, closed/replaced dialogs, settings')
 
@@ -115,7 +115,7 @@ event('QUEST_DETAIL'); assert(#calls == before)
 NS.ResumeAutomation(); event('QUEST_DETAIL'); before = #calls
 for i=1,20 do event('QUEST_FINISHED'); event('QUEST_DETAIL') end
 assert(#calls == before)
-assert(NS.lastQuestAction:find('ohne bestätigten Erfolg', 1, true))
+assert(NS.lastQuestAction:find('without confirmed success', 1, true))
 -- Selection loops (before acceptance is reached) are bounded as well.
 NS.ResumeAutomation(); active={{questID=43,isComplete=true}}
 event('GOSSIP_SHOW'); before=#calls

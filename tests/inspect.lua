@@ -40,13 +40,13 @@ assert(report:find('NPC%-ID: 257'))
 assert(report:find('questID=47', 1, true))
 assert(report:find('customBetaField=17', 1, true))
 assert(report:find('Gold Dust: 2/10', 1, true))
-assert(report:find('restricted=<geschützt>', 1, true))
+assert(report:find('restricted=<restricted>', 1, true))
 assert(report:find('Map-ID: 1429', 1, true))
 assert(report:find('type="item"', 1, true))
 exists = false
 local count = calls
 local empty, reason = NS.BuildInspection()
-assert(not empty and reason:find('anvisieren') and calls == count)
+assert(not empty and reason:find('target') and calls == count)
 exists, player = true, true
 assert(not NS.BuildInspection()); assert(calls == count)
 player = false
@@ -65,12 +65,12 @@ UIParent = {}
 QuesterInspectScanTooltipTextLeft1 = { GetText = function() return 'Gold Dust: 2/10' end }
 C_TooltipInfo, C_Map, C_QuestLog = nil, nil, nil
 report = assert(NS.BuildInspection())
-assert(report:find('API fehlt', 1, true))
+assert(report:find('API unavailable', 1, true))
 assert(report:find('Gold Dust: 2/10', 1, true) and scan.hidden)
 -- A failed modern call still captures fallback data and identifies the failure.
 C_TooltipInfo = { GetUnit = function() error('unavailable in this client') end }
 report = assert(NS.BuildInspection())
-assert(report:find('API-Aufruf fehlgeschlagen', 1, true))
+assert(report:find('API call failed', 1, true))
 assert(report:find('Gold Dust: 2/10', 1, true))
 -- Legacy quest APIs retain all objective fields, including item type.
 function GetNumQuestLogEntries() return 1 end

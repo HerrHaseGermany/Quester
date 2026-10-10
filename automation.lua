@@ -49,9 +49,9 @@ function NS.HandleExceptionCommand(input, printMessage)
         local exceptions = ExceptionTables()
         if lower == 'exceptions clear' then
             exceptions.quest, exceptions.npc, exceptions.item = {}, {}, {}
-            printMessage('Alle Automatik-Ausnahmen entfernt.')
+            printMessage('All automation exceptions cleared.')
         else
-            printMessage('/quester exclude quest|npc|item [ID/Name] | allow quest|npc|item [ID/Name] | exceptions clear')
+            printMessage('/quester exclude quest|npc|item [ID/name] | allow quest|npc|item [ID/name] | exceptions clear')
             for _, kind in ipairs({ 'quest', 'npc', 'item' }) do
                 for key, label in pairs(exceptions[kind]) do
                     printMessage(kind .. ': ' .. label .. ' [' .. tostring(key) .. ']')
@@ -63,13 +63,13 @@ function NS.HandleExceptionCommand(input, printMessage)
     local action, kind, query = lower:match('^(%a+)%s+(%a+)%s*(.-)$')
     if action ~= 'exclude' and action ~= 'allow' then return false end
     if kind ~= 'quest' and kind ~= 'npc' and kind ~= 'item' then
-        printMessage('/quester ' .. action .. ' quest|npc|item [ID/Name]'); return true
+        printMessage('/quester ' .. action .. ' quest|npc|item [ID/name]'); return true
     end
     local entries = ExceptionTables()[kind]
     local id, title
     if query == '' then
         if kind == 'item' then
-            printMessage('Bitte eine Gegenstands-ID oder einen exakten Namen angeben.'); return true
+            printMessage('Please provide an item ID or exact name.'); return true
         end
         if kind == 'quest' then
             id, title = GetQuestID and GetQuestID(), GetTitleText and GetTitleText()
@@ -79,15 +79,15 @@ function NS.HandleExceptionCommand(input, printMessage)
         title = command:match('^%S+%s+%S+%s+(.+)$')
     end
     if id and (id <= 0 or id % 1 ~= 0) then
-        printMessage('Bitte eine positive, ganze ID angeben.'); return true
+        printMessage('Please provide a positive integer ID.'); return true
     end
     if not id and (not title or title == '') then
-        printMessage('Keine Quest/kein NPC gefunden. Mit Shift öffnen oder ID/Name angeben.'); return true
+        printMessage('No quest or NPC found. Hold Shift while opening the dialogue, or provide an ID or name.'); return true
     end
     local key = id or title:lower()
     if action == 'exclude' then
         entries[key] = title and title ~= '' and title or tostring(id)
-        printMessage('Automatik-Ausnahme gespeichert: ' .. entries[key])
+        printMessage('Automation exception saved: ' .. entries[key])
     else
         entries[key] = nil
         if not id then
@@ -95,7 +95,7 @@ function NS.HandleExceptionCommand(input, printMessage)
                 if type(label) == 'string' and label:lower() == title:lower() then entries[savedKey] = nil end
             end
         end
-        printMessage('Automatik-Ausnahme entfernt: ' .. (title or tostring(id)))
+        printMessage('Automation exception removed: ' .. (title or tostring(id)))
     end
     return true
 end
@@ -120,10 +120,10 @@ function NS.HandleMerchantEvent(event)
             local message
             if gold >= cost then
                 RepairAllItems(false)
-                message = 'Ausrüstung automatisch repariert. Kosten: ' .. Money(cost)
+                message = 'Equipment automatically repaired. Cost: ' .. Money(cost)
             else
-                message = 'Nicht genug Gold zum Reparieren. Kosten: ' .. Money(cost)
-                    .. '; fehlend: ' .. Money(cost - gold)
+                message = 'Not enough gold for repairs. Cost: ' .. Money(cost)
+                    .. '; shortfall: ' .. Money(cost - gold)
             end
             DEFAULT_CHAT_FRAME:AddMessage('|cffffff00Quester:|r ' .. message)
         end
@@ -209,7 +209,7 @@ local function Stop(reason)
     stopped = true
     blockedState = attemptState or Snapshot()
     generation = generation + 1
-    Status('Automatik pausiert: ' .. reason .. '. Fortsetzung automatisch nach freiem Platz.')
+    Status('Automation paused: ' .. reason .. '. Resumes automatically when space is freed.')
     DEFAULT_CHAT_FRAME:AddMessage('Quester: ' .. NS.lastQuestAction)
 end
 
@@ -218,7 +218,7 @@ function NS.ResumeAutomation()
     attemptState, blockedState = nil, nil
     generation = generation + 1
     phase = nil
-    Status('Sperre aufgehoben; Questgeber erneut ansprechen')
+    Status('Error lock cleared; talk to the quest giver again')
 end
 
 local function InventoryError(message)
@@ -238,37 +238,37 @@ end
 
 local function Call(label, fn, ...)
     if stopped then return end
-    if type(fn) ~= 'function' then Stop(label .. ': API fehlt'); return end
-    local id = (label == 'Quest öffnen' or label == 'Abgabe öffnen') and select(1, ...)
+    if type(fn) ~= 'function' then Stop(label .. ': API unavailable'); return end
+    local id = (label == 'Open quest' or label == 'Open turn-in') and select(1, ...)
         or (GetQuestID and GetQuestID()) or 0
     local key = label .. ':' .. tostring(id)
     if attempts[key] then
-        Stop('wiederholter Questversuch ohne bestätigten Erfolg')
+        Stop('repeated quest attempt without confirmed success')
         return
     end
     -- Mark before calling: WoW can synchronously send another dialog/error event.
     attempts[key] = true
     lastAttempt = GetTime()
     attemptState = Snapshot()
-    Status(label .. ' angefordert')
+    Status(label .. ' requested')
     local ok, err = pcall(fn, ...)
     if not ok then Stop(label .. ': ' .. tostring(err)) end
 end
 local function Complete(value) return value == true or value == 1 end
 local function Process(event)
     if stopped then return end
-    if Paused() then Status('Durch Shift oder Kampf pausiert'); return end
+    if Paused() then Status('Paused by Shift or combat'); return end
     local npcID, npcName = NPCIdentity()
-    if Excluded('npc', npcID, npcName) then Status('NPC von Automatik ausgeschlossen'); return end
+    if Excluded('npc', npcID, npcName) then Status('NPC excluded from automation'); return end
     if event ~= 'GOSSIP_SHOW' and event ~= 'QUEST_GREETING'
         and Excluded('quest', GetQuestID and GetQuestID(), GetTitleText and GetTitleText()) then
-        Status('Quest von Automatik ausgeschlossen'); return
+        Status('Quest excluded from automation'); return
     end
     if event == 'GOSSIP_SHOW' then
         if QuesterDB.autoTurnIn and C_GossipInfo and C_GossipInfo.GetActiveQuests then
             for _, quest in ipairs(C_GossipInfo.GetActiveQuests() or {}) do
                 if Complete(quest.isComplete) and not Excluded('quest', quest.questID, quest.title) then
-                    Call('Abgabe öffnen', C_GossipInfo.SelectActiveQuest, quest.questID)
+                    Call('Open turn-in', C_GossipInfo.SelectActiveQuest, quest.questID)
                     return
                 end
             end
@@ -277,7 +277,7 @@ local function Process(event)
             for _, quest in ipairs(C_GossipInfo.GetAvailableQuests() or {}) do
                 if (not quest.isTrivial or QuesterDB.acceptTrivial)
                     and not Excluded('quest', quest.questID, quest.title) then
-                    Call('Quest öffnen', C_GossipInfo.SelectAvailableQuest, quest.questID)
+                    Call('Open quest', C_GossipInfo.SelectAvailableQuest, quest.questID)
                     return
                 end
             end
@@ -287,7 +287,7 @@ local function Process(event)
             for index = 1, GetNumActiveQuests() do
                 local title, finished = GetActiveTitle(index)
                 if Complete(finished) and not Excluded('quest', GetActiveQuestID and GetActiveQuestID(index), title) then
-                    Call('Abgabe öffnen', SelectActiveQuest, index); return
+                    Call('Open turn-in', SelectActiveQuest, index); return
                 end
             end
         end
@@ -297,28 +297,28 @@ local function Process(event)
                 if (not trivial or QuesterDB.acceptTrivial)
                     and not Excluded('quest', GetAvailableQuestID and GetAvailableQuestID(index),
                         GetAvailableTitle and GetAvailableTitle(index)) then
-                    Call('Quest öffnen', SelectAvailableQuest, index); return
+                    Call('Open quest', SelectAvailableQuest, index); return
                 end
             end
         end
     elseif event == 'QUEST_DETAIL' and QuesterDB.autoAccept then
-        Call('Quest annehmen', AcceptQuest)
+        Call('Accept quest', AcceptQuest)
     elseif event == 'QUEST_PROGRESS' and QuesterDB.autoTurnIn then
         if IsQuestCompletable and IsQuestCompletable() then
             if GetQuestMoneyToGet and GetQuestMoneyToGet() > 0 then
-                Status('Quest mit Geldkosten: manuelle Bestätigung'); return
+                Status('Quest with monetary costs: manual confirmation required'); return
             end
-            Call('Quest abschließen', CompleteQuest)
-        else Status('Quest noch nicht abgabebereit') end
+            Call('Complete quest', CompleteQuest)
+        else Status('Quest not yet ready for turn-in') end
     elseif event == 'QUEST_COMPLETE' and QuesterDB.autoTurnIn then
-        if not GetNumQuestChoices then Status('Belohnungs-API fehlt'); return end
+        if not GetNumQuestChoices then Status('Reward API unavailable'); return end
         local choices = GetNumQuestChoices()
-        if type(choices) ~= 'number' then Status('Belohnungen noch nicht geladen'); return end
-        if choices > 1 then Status('Mehrere Belohnungen: bitte selbst auswählen'); return end
+        if type(choices) ~= 'number' then Status('Rewards not yet loaded'); return end
+        if choices > 1 then Status('Multiple rewards: please choose manually'); return end
         if GetQuestMoneyToGet and GetQuestMoneyToGet() > 0 then
-            Status('Quest mit Geldkosten: manuelle Bestätigung'); return
+            Status('Quest with monetary costs: manual confirmation required'); return
         end
-        Call('Questbelohnung abholen', GetQuestReward, choices == 1 and 1 or 0)
+        Call('Collect quest reward', GetQuestReward, choices == 1 and 1 or 0)
     end
 end
 
@@ -331,7 +331,7 @@ Recover = function()
     if not stopped or Paused() or not ResourcesImproved(blockedState, Snapshot()) then return end
     local currentPhase = phase
     NS.ResumeAutomation()
-    Status('Platz verfügbar; Automatik fortgesetzt')
+    Status('Space available; automation resumed')
     local panel = currentPhase and _G[panels[currentPhase]]
     if panel and panel:IsShown() then NS.HandleQuestEvent(currentPhase) end
 end
@@ -344,7 +344,7 @@ function NS.HandleQuestEvent(event, arg1, arg2)
     if event == 'UI_ERROR_MESSAGE' then
         local message = type(arg2) == 'string' and arg2 or arg1
         if lastAttempt and GetTime() - lastAttempt <= 5 and InventoryError(message) then
-            Stop('Inventar/Questlog voll oder Gegenstandslimit erreicht')
+            Stop('inventory or quest log full, or item limit reached')
         end
         return true
     end
@@ -363,7 +363,7 @@ function NS.HandleQuestEvent(event, arg1, arg2)
     if stopped then Recover(); return true end
     generation = generation + 1
     local token = generation
-    if Paused() then Status('Durch Shift oder Kampf pausiert'); return true end
+    if Paused() then Status('Paused by Shift or combat'); return true end
     local questID = event ~= 'GOSSIP_SHOW' and event ~= 'QUEST_GREETING' and GetQuestID and GetQuestID()
     -- Let Blizzard finish building the dialog before advancing it.
     C_Timer.After(0.05, function()

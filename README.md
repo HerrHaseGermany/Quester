@@ -2,6 +2,10 @@ Quester
 
 Lightweight quest helper for WoW Forever client 1.60.1.
 
+All addon interface text, messages and diagnostics are in English. Quest titles,
+objective text, NPC names and item names come from the game and retain the client's
+language. Localized quest detection remains supported.
+
 Quest locations appear on the world map and nearby on the minimap: quest givers,
 turn-in points and objective areas use distinct icons with tooltips. Quester checks
 the available map APIs at runtime and uses client quest POIs or waypoints when

@@ -2,7 +2,7 @@ local _, NS = ...
 local active, locations, markers = {}, nil, {}
 local miniPins, mapFrame = {}, nil
 local dirty, elapsed, mapID, playerMap = true, 0, nil, nil
-local labels = { giver = "Questgeber", turnin = "Abgabestelle", objective = "Zielgebiet" }
+local labels = { giver = "Quest giver", turnin = "Turn-in point", objective = "Objective area" }
 local textures = {
     giver = "Interface/GossipFrame/AvailableQuestIcon",
     turnin = "Interface/GossipFrame/ActiveQuestIcon",
@@ -52,10 +52,10 @@ local function Tooltip(pin)
     GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
     GameTooltip:AddLine(marker.title or ("Quest " .. marker.questID), 1, 0.82, 0)
     GameTooltip:AddLine(labels[marker.kind], 1, 1, 1)
-    GameTooltip:AddLine(marker.observed and "Besuchte Position in der Nähe des Quest-NPCs"
-        or "Position aus der Quest-Karten-API", 0.7, 0.7, 0.7, true)
+    GameTooltip:AddLine(marker.observed and "Visited position near the quest NPC"
+        or "Position from the quest map API", 0.7, 0.7, 0.7, true)
     if marker.observed and marker.kind == "giver" then
-        GameTooltip:AddLine("Aktuelle Questverfügbarkeit nicht bestätigt", 0.7, 0.7, 0.7, true)
+        GameTooltip:AddLine("Current quest availability not confirmed", 0.7, 0.7, 0.7, true)
     end
     GameTooltip:Show()
 end

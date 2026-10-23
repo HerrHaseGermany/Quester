@@ -66,9 +66,9 @@ function NS.InitSettings()
     local tomTomStatus
     if NS.SetTomTomNavigation then
         y = y + 12
-        Text("TomTom quest navigation (Retail)", "GameFontNormal")
+        Text("TomTom quest navigation", "GameFontNormal")
         Check("tomTomNavigation", "Send the highlighted quest target to TomTom",
-            "Optional Retail feature. Follows the quest highlighted by the WoW quest helper. Requires TomTom and usable game coordinates. Disable other automatic TomTom arrow integrations, such as RestedXP-TomTom, while using this feature.",
+            "Optional navigation feature. Follows the quest highlighted by the WoW quest helper. Requires TomTom and usable game coordinates. Disable other automatic TomTom arrow integrations, such as RestedXP-TomTom, while using this feature.",
             function(enabled)
                 if NS.SetTomTomNavigation then NS.SetTomTomNavigation(enabled) end
             end)

@@ -1,5 +1,11 @@
 ## Changelog
 
+### 0.7
+
+- Centralize the addon version in `version.lua` and synchronize all client TOCs.
+- Use the shared version in diagnostics.
+- Load optional TomTom navigation on Forever/Camelot and the main fallback; check API availability instead of restricting navigation to Retail.
+
 ### 0.5.3
 
 - Automatically clear the inventory lock when space is actually freed and resume open quest dialogues.

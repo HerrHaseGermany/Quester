@@ -18,6 +18,12 @@ are excluded and completed quests no longer show remembered giver markers. Enemy
 names alone never create a position. Minimap markers require usable map dimensions
 and player coordinates; unsupported or inaccessible APIs leave those markers absent.
 
+Versioning
+
+`version.lua` is the central source for the addon version. After changing
+`NS.VERSION`, run `python3 scripts/sync_version.py` to update the metadata in all
+client TOCs. Every TOC loads `version.lua` first; diagnostics use the same version.
+
 Client TOCs
 
 `Quester.toc` is the main TOC and fallback. The sibling TOCs are alternative
@@ -147,7 +153,7 @@ If the client reports a full inventory, full quest log, or an item limit after a
 
 Once the inventory has actually been relieved — through more free slots or fewer items — or space has been freed in the quest log, the lock is removed automatically. If the quest dialogue is still open, processing continues automatically; if it has been closed, simply talk to the NPC again. Inventory events that do not change available space, and merely rearranging item stacks, do not trigger another attempt. If the action fails again, Quester pauses until space is freed again. During combat, continuation is delayed until combat ends. /quester resume remains available as an optional manual reset.
 
-TomTom Quest Navigation (Retail)
+TomTom Quest Navigation (Retail / Forever)
 
 Optional and disabled by default. In Settings → AddOns → Quester, enable
 "Send the highlighted quest target to TomTom", or use `/quester tomtom on`.
@@ -176,11 +182,13 @@ Quester selects the arrow when its target changes; it does not continuously
 reclaim an unchanged target after another addon or a manual waypoint takes over.
 TomTom's own arrow visibility and corpse priority settings still apply.
 
-This first implementation is loaded only by `Quester_Mainline.toc`, which
-also declares TomTom as an optional dependency. Other TOCs do not load the
-integration or show its settings; the Forever port will be added separately.
+The integration is loaded by `Quester_Mainline.toc`, `Quester_Forever.toc`,
+`Quester_Camelot.toc` and the main fallback `Quester.toc`. These TOCs declare
+TomTom as an optional dependency. Navigation checks the available APIs rather
+than the client project ID. Missing quest tracking APIs or coordinates are
+reported in the navigation status; they do not create a guessed destination.
 `/quester debug` prints the navigation status and, when available, quest ID,
-map ID and coordinates. Retail verification: enable the option, highlight a
+map ID and coordinates. Retail / Forever verification: enable the option, highlight a
 quest in Blizzard's tracker, check the TomTom arrow, switch quests, progress
 to a new objective/turn-in, then disable the option. Also test a manual map
 pin, missing TomTom, and simultaneous arrow integrations. In-game behavior

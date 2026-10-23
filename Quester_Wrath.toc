@@ -2,11 +2,12 @@
 ## Title: |cffffff00Quester|r 
 ## Notes: Lightweight quest helper with quest and merchant automation. Wrath of the Lich King Classic.
 ## Author: Hase
-## Version: 0.6.1
+## Version: 0.7
 ## SavedVariables: QuesterDB
 ## IconTexture: Interface/AddOns/Quester/Media/logo.blp
 
 # Client-specific file list. Keep shared modules in dependency order.
+version.lua
 window.lua
 inspect.lua
 learning.lua

@@ -70,7 +70,7 @@ function NS.BuildInspection()
     if not exists then return nil, "Please target a quest enemy first." end
     if Read(UnitIsPlayer, "target") then return nil, "Please target an NPC instead of a player." end
 
-    local lines = { "Quester Diagnostics 0.5.3", "Snapshot of the targeted NPC; no confirmed loot association." }
+    local lines = { "Quester Diagnostics " .. (NS.VERSION or "unknown"), "Snapshot of the targeted NPC; no confirmed loot association." }
     local function Add(label, value, reason)
         if #lines >= 650 then return end
         local ok, text = pcall(Dump, value, 0, {})

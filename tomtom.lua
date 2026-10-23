@@ -1,7 +1,6 @@
 local _, NS = ...
 local driver, owner, uid, current
 local elapsed = 0
-local retail = WOW_PROJECT_MAINLINE ~= nil and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 NS.tomTomStatus = "TomTom quest navigation: off."
 
 -- Read only public, usable values. Restricted or unavailable data is unknown.
@@ -79,11 +78,6 @@ function NS.RefreshTomTom()
         NS.tomTomStatus = "TomTom quest navigation: off."
         return
     end
-    if not retail then
-        Clear()
-        NS.tomTomStatus = "TomTom quest navigation: currently supported on Retail only."
-        return
-    end
     local tt = TomTom
     if type(tt) ~= "table" or type(tt.AddWaypoint) ~= "function"
         or type(tt.RemoveWaypoint) ~= "function" or type(tt.SetCrazyArrow) ~= "function" then
@@ -145,7 +139,7 @@ function NS.InitTomTom()
         if QuesterDB and QuesterDB.tomTomNavigation then NS.RefreshTomTom() end
     end)
     NS.RefreshTomTom()
-    if retail and QuesterDB and QuesterDB.tomTomNavigation and not TomTom
+    if QuesterDB and QuesterDB.tomTomNavigation and not TomTom
         and DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
         DEFAULT_CHAT_FRAME:AddMessage("|cffffff00Quester:|r " .. NS.tomTomStatus)
     end

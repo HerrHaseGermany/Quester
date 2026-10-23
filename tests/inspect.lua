@@ -34,8 +34,10 @@ C_QuestLog = {
     GetQuestsOnMap = function(id) assert(id == 1429); return {{ questID = 47, x = 0.4, y = 0.5 }} end,
 }
 C_Map = { GetBestMapForUnit = function() return 1429 end }
+assert(loadfile('version.lua'))('Quester', NS)
 assert(loadfile('inspect.lua'))('Quester', NS)
 local report = assert(NS.BuildInspection())
+assert(report:find("Quester Diagnostics " .. NS.VERSION, 1, true))
 assert(report:find('NPC%-ID: 257'))
 assert(report:find('questID=47', 1, true))
 assert(report:find('customBetaField=17', 1, true))

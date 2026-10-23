@@ -69,12 +69,6 @@ NS.RefreshTomTom(); assert(added == 6 and NS.tomTomStatus:find("map 200"))
 C_QuestLog.GetQuestsOnMap = function() return {} end
 C_QuestLog.GetNextWaypoint = function() return -1, 0.2, 0.3 end
 NS.RefreshTomTom(); assert(added == 6 and removed == 6, "never reuse coordinates from invalid waypoint")
--- Legacy clients load safely but the feature stays Retail-only.
-WOW_PROJECT_ID = 2
-local legacy = {}; assert(loadfile("tomtom.lua"))("Quester", legacy)
-legacy.InitTomTom(); assert(added == 6 and legacy.tomTomStatus:find("Retail only"))
-print("PASS: TomTom opt-in, lifecycle, tracking changes, ownership, POI fallback, restricted APIs and Retail gate")
-
 -- The arrow has a quest title and objective, independently of waypoint ownership.
 C_QuestLog.GetNextWaypoint = function() return 100, 0.4, 0.6 end
 local objective = "Reach the tower"
@@ -92,3 +86,18 @@ NS.RefreshTomTom(); assert(arrowTitle == "Quest 43\nWolves slain: 1/5; Collect s
 C_QuestLog.GetQuestObjectives = nil
 NS.RefreshTomTom(); assert(arrowTitle == "Quest 43", "no empty or invented objective")
 print("PASS: two-line arrow label, waypoint description, objective progress fallback and missing text")
+
+-- Forever may use a different project ID or expose no project constants.
+-- Navigation depends on actual API availability, not the project identifier.
+WOW_PROJECT_ID, WOW_PROJECT_MAINLINE = nil, nil
+local forever = {}; assert(loadfile("tomtom.lua"))("Quester", forever)
+local before = added
+forever.InitTomTom()
+assert(added == before + 1 and forever.tomTomStatus:find("quest 43"))
+forever.RefreshTomTom(); assert(added == before + 1)
+C_SuperTrack = nil
+forever.RefreshTomTom()
+assert(forever.tomTomStatus:find("APIs unavailable") and points[manual])
+QuesterDB.tomTomNavigation = false
+forever.RefreshTomTom(); assert(forever.tomTomStatus:find("off"))
+print("PASS: TomTom lifecycle, ownership, POI fallback, restricted APIs and Forever capability checks")

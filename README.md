@@ -1,6 +1,8 @@
 Quester
 
-Lightweight quest helper for WoW Forever client 1.60.1.
+Lightweight quest helper, originally developed for WoW Forever client 1.60.1.
+Client-specific TOCs provide separate entry points for other WoW editions; their
+runtime compatibility still needs verification in each client.
 
 All addon interface text, messages and diagnostics are in English. Quest titles,
 objective text, NPC names and item names come from the game and retain the client's
@@ -15,6 +17,37 @@ remembered quest givers do not guarantee current quest availability. Hidden ques
 are excluded and completed quests no longer show remembered giver markers. Enemy
 names alone never create a position. Minimap markers require usable map dimensions
 and player coordinates; unsupported or inaccessible APIs leave those markers absent.
+
+Client TOCs
+
+`Quester.toc` is the main TOC and fallback. The sibling TOCs are alternative
+entry points selected by the client's game type; they are not loaded by the main
+TOC and do not include one another. Keep the addon folder named `Quester`.
+
+| TOC | Client | Interface |
+| --- | --- | --- |
+| `Quester_Mainline.toc` | Retail | 120105 |
+| `Quester_Vanilla.toc` | Classic Era, Hardcore, Season of Discovery | 11509 |
+| `Quester_TBC.toc` | Burning Crusade Classic, Anniversary | 20506 |
+| `Quester_Wrath.toc` | Wrath Classic | 30405, 38002 |
+| `Quester_Cata.toc` | Cataclysm Classic | 40402 |
+| `Quester_Mists.toc` | Mists of Pandaria Classic | 50504 |
+| `Quester_Forever.toc` | Forever | 16001 |
+| `Quester_Camelot.toc` | Forever under the Camelot game type | 16001 |
+
+Each TOC initially loads the existing modules in the same order and uses
+`QuesterDB`. To build a different interface for an edition, change that TOC's
+file list, for example replacing `window.lua` or `settings.lua` with an
+edition-specific implementation. Preserve the namespace functions used by the
+other modules and keep `quester.lua` last. Apply common module changes to all
+relevant TOCs, including the main fallback; keep the Forever/Camelot lists aligned.
+Adding an interface number alone does not port the addon to that client.
+
+Retail, Era, TBC, Mists and Forever interface numbers were checked against the
+local installation's `.build.info`; Wrath and Cata values match the installed
+QuestieDB TOCs. Update these headers when targeting newer patches. The Blizzard
+UI source also uses game-type-specific loading for edition-specific files:
+https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_Deprecated/Blizzard_Deprecated.toc
 
 First Use
 
@@ -113,3 +146,45 @@ Protection Against Failed Quest Loops
 If the client reports a full inventory, full quest log, or an item limit after an automatic action, Quester pauses quest acceptance and turn-in. In addition, the same action for the same quest will not be repeated without confirmed success. Cancelling discards pending actions and prints a single notification in chat.
 
 Once the inventory has actually been relieved — through more free slots or fewer items — or space has been freed in the quest log, the lock is removed automatically. If the quest dialogue is still open, processing continues automatically; if it has been closed, simply talk to the NPC again. Inventory events that do not change available space, and merely rearranging item stacks, do not trigger another attempt. If the action fails again, Quester pauses until space is freed again. During combat, continuation is delayed until combat ends. /quester resume remains available as an optional manual reset.
+
+TomTom Quest Navigation (Retail)
+
+Optional and disabled by default. In Settings → AddOns → Quester, enable
+"Send the highlighted quest target to TomTom", or use `/quester tomtom on`.
+Disable it in the same panel or with `/quester tomtom off`. The setting is
+saved account-wide. TomTom must also be installed and enabled. It is declared
+as an optional dependency: Quester still loads without it. Enabling navigation
+without TomTom displays an explanatory chat message and status in Quester's
+options rather than an addon loading error.
+
+Quester follows the quest currently highlighted by Blizzard's quest helper,
+using `C_SuperTrack.GetSuperTrackedQuestID()` and
+`C_QuestLog.GetNextWaypoint()`. If no waypoint is supplied, it tries the
+quest's native map POI. It checks for changes every half second and creates
+one temporary arrow waypoint without adding extra map/minimap markers.
+The arrow shows the quest name on the first line and the game's waypoint
+text below it. If no waypoint text is supplied, the remaining quest objectives
+are shown instead; if neither is available, only the quest name is shown.
+Completion and turn-in destinations follow the data supplied by the game;
+Quester does not choose the geographically nearest quest or calculate a route.
+When there is no active quest target or no usable coordinates, its waypoint
+is removed. Disabling the feature removes only Quester's waypoint.
+
+Keep only one automatic TomTom arrow integration enabled at a time;
+RestedXP-TomTom or TomTom's closest-quest integration can select other targets.
+Quester selects the arrow when its target changes; it does not continuously
+reclaim an unchanged target after another addon or a manual waypoint takes over.
+TomTom's own arrow visibility and corpse priority settings still apply.
+
+This first implementation is loaded only by `Quester_Mainline.toc`, which
+also declares TomTom as an optional dependency. Other TOCs do not load the
+integration or show its settings; the Forever port will be added separately.
+`/quester debug` prints the navigation status and, when available, quest ID,
+map ID and coordinates. Retail verification: enable the option, highlight a
+quest in Blizzard's tracker, check the TomTom arrow, switch quests, progress
+to a new objective/turn-in, then disable the option. Also test a manual map
+pin, missing TomTom, and simultaneous arrow integrations. In-game behavior
+still requires verification; mocked API tests do not establish client compatibility.
+
+API source: Blizzard-generated QuestLog and SuperTrack documentation mirrored at
+https://github.com/Gethe/wow-ui-source/tree/live/Interface/AddOns/Blizzard_APIDocumentationGenerated

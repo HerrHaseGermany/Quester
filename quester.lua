@@ -323,12 +323,14 @@ frame:SetScript("OnEvent", function(_, event, name, ...)
         if QuesterDB.notifyReady == nil then QuesterDB.notifyReady = false end
         if QuesterDB.autoSellGrey == nil then QuesterDB.autoSellGrey = false end
         if QuesterDB.autoRepair == nil then QuesterDB.autoRepair = false end
+        if QuesterDB.tomTomNavigation == nil then QuesterDB.tomTomNavigation = false end
         if type(QuesterDB.hiddenQuests) ~= "table" then QuesterDB.hiddenQuests = {} end
         ready = true
         NS.InitWindow()
         NS.InitLearning()
         if NS.InitMaps then NS.InitMaps() end
         if NS.InitItemTooltips then NS.InitItemTooltips() end
+        if NS.InitTomTom then NS.InitTomTom() end
         if NS.InitSettings then NS.InitSettings() end
     else
         if NS.HandleMerchantEvent(event) then return end
@@ -447,6 +449,7 @@ SlashCmdList.QUESTER = function(input)
         end
     elseif command == "debug" then
         Print(NS.lastStatus or "No quest data yet.")
+        if NS.tomTomStatus then Print(NS.tomTomStatus) end
         Print(NS.lastQuestAction or "No quest interaction yet.")
         for _, row in ipairs(NS.lastRows or {}) do
             Print(row.title .. ": " .. row.text .. " → " .. (row.name or "no enemy name"))
@@ -463,6 +466,11 @@ SlashCmdList.QUESTER = function(input)
         QuesterDB.targetMacro = not QuesterDB.targetMacro
         Print("Macro updates: " .. (QuesterDB.targetMacro and "on" or "off"))
         ScheduleUpdate()
+    elseif command == "tomtom" or command == "tomtom on" or command == "tomtom off" then
+        QuesterDB.tomTomNavigation = command == "tomtom on"
+            or (command == "tomtom" and not QuesterDB.tomTomNavigation)
+        if NS.SetTomTomNavigation then NS.SetTomTomNavigation(QuesterDB.tomTomNavigation)
+        else Print("TomTom quest navigation unavailable.") end
     elseif command == "notify" or command == "notify on" or command == "notify off" then
         QuesterDB.notifyReady = command == "notify on"
             or (command == "notify" and not QuesterDB.notifyReady)
@@ -482,7 +490,7 @@ SlashCmdList.QUESTER = function(input)
         ScheduleUpdate()
         Print(InCombatLockdown() and "Update deferred until combat ends." or "Update requested.")
     else
-        Print("/quester settings | show [quest name/ID] | hide [quest name/ID] | hidden [clear] | exclude quest/npc/item [ID/name] | allow quest/npc/item [ID/name] | exceptions [clear] | objectives | priority [quest name/ID/clear] | inspect | debug | resume | auto [on/off] | turnin | macro | notify [on/off] | sell [on/off] | repair [on/off] | trivial | update")
+        Print("/quester settings | show [quest name/ID] | hide [quest name/ID] | hidden [clear] | exclude quest/npc/item [ID/name] | allow quest/npc/item [ID/name] | exceptions [clear] | objectives | priority [quest name/ID/clear] | inspect | debug | resume | auto [on/off] | turnin | macro | tomtom [on/off] | notify [on/off] | sell [on/off] | repair [on/off] | trivial | update")
         Print("Quest acceptance: " .. (QuesterDB.autoAccept and "on" or "off")
             .. "; Turn-in: " .. (QuesterDB.autoTurnIn and "on" or "off")
             .. "; Macro: " .. (QuesterDB.targetMacro and "on" or "off")

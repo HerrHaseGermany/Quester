@@ -1,4 +1,4 @@
-## Interface: 16001
+## Interface: 16001, 120105, 11509, 20506, 30405, 38002, 40402, 50504
 ## Title: |cffffff00Quester|r 
 ## Notes: Lightweight quest helper with quest and merchant automation.
 ## Author: Hase
@@ -6,6 +6,7 @@
 ## SavedVariables: QuesterDB
 ## IconTexture: Interface/AddOns/Quester/Media/logo.blp
 
+# Main TOC: fallback when no client-specific TOC is selected.
 window.lua
 inspect.lua
 learning.lua

@@ -63,6 +63,18 @@ function NS.InitSettings()
     Check("notifyReady", "Notify when quests are ready for turn-in",
         "Shows a message when a quest becomes ready for turn-in.")
 
+    local tomTomStatus
+    if NS.SetTomTomNavigation then
+        y = y + 12
+        Text("TomTom quest navigation (Retail)", "GameFontNormal")
+        Check("tomTomNavigation", "Send the highlighted quest target to TomTom",
+            "Optional Retail feature. Follows the quest highlighted by the WoW quest helper. Requires TomTom and usable game coordinates. Disable other automatic TomTom arrow integrations, such as RestedXP-TomTom, while using this feature.",
+            function(enabled)
+                if NS.SetTomTomNavigation then NS.SetTomTomNavigation(enabled) end
+            end)
+        tomTomStatus = Text(NS.tomTomStatus or "TomTom quest navigation: off.")
+    end
+
     y = y + 12
     Text("Merchants", "GameFontNormal")
     Check("autoSellGrey", "Automatically sell grey items",
@@ -88,6 +100,15 @@ function NS.InitSettings()
     Text("Quest priority and hidden quests", "GameFontNormal")
     Text("Enter a quest name or ID. Hidden quests are excluded from the target macro and quest window.")
     local updates = {}
+    local function UpdateNavigationStatus()
+        if tomTomStatus then tomTomStatus:SetText(NS.tomTomStatus or "TomTom quest navigation: off.") end
+    end
+    updates[#updates + 1] = UpdateNavigationStatus
+    local statusElapsed = 0
+    panel:SetScript("OnUpdate", function(_, delta)
+        statusElapsed = statusElapsed + delta
+        if statusElapsed >= 0.5 then statusElapsed = 0; UpdateNavigationStatus() end
+    end)
     local function Sync()
         for _, entry in ipairs(checks) do
             local value = not not QuesterDB[entry.key]

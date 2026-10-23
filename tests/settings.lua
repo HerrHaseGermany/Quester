@@ -26,6 +26,8 @@ function CreateFrame(kind, name, parent, template)
     frames[#frames + 1] = widget
     return widget
 end
+local navigated
+function NS.SetTomTomNavigation(enabled) navigated = enabled end
 function NS.Refresh() refreshed = refreshed + 1 end
 function NS.ResumeAutomation() resumed = resumed + 1 end
 function NS.ShowWindow() visible = true end
@@ -62,6 +64,8 @@ assert(not checks['Automatically turn in quests']:GetChecked())
 assert(not checks['Show quest window']:GetChecked())
 Click('Automatically turn in quests', true); assert(QuesterDB.autoTurnIn and resumed == 1)
 Click('Automatically repair equipment', true); assert(QuesterDB.autoRepair)
+Click('Send the highlighted quest target to TomTom', true); assert(QuesterDB.tomTomNavigation and navigated)
+Click('Send the highlighted quest target to TomTom', false); assert(not QuesterDB.tomTomNavigation and navigated == false)
 Click('Show quest window', true); assert(not QuesterDB.windowHidden and visible)
 Click('Show quest window', false); assert(QuesterDB.windowHidden and visible == false)
 Click('Collapse quest window', true); assert(QuesterDB.windowCollapsed)

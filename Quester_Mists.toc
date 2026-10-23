@@ -2,7 +2,7 @@
 ## Title: |cffffff00Quester|r 
 ## Notes: Lightweight quest helper with quest and merchant automation. Mists of Pandaria Classic.
 ## Author: Hase
-## Version: 0.7.1
+## Version: 0.7.2
 ## SavedVariables: QuesterDB
 ## IconTexture: Interface/AddOns/Quester/Media/logo.blp
 

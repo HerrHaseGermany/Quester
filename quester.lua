@@ -450,6 +450,7 @@ SlashCmdList.QUESTER = function(input)
     elseif command == "debug" then
         Print(NS.lastStatus or "No quest data yet.")
         if NS.tomTomStatus then Print(NS.tomTomStatus) end
+        if NS.GetTomTomDiagnostics then Print(NS.GetTomTomDiagnostics()) end
         Print(NS.lastQuestAction or "No quest interaction yet.")
         for _, row in ipairs(NS.lastRows or {}) do
             Print(row.title .. ": " .. row.text .. " → " .. (row.name or "no enemy name"))
@@ -466,6 +467,10 @@ SlashCmdList.QUESTER = function(input)
         QuesterDB.targetMacro = not QuesterDB.targetMacro
         Print("Macro updates: " .. (QuesterDB.targetMacro and "on" or "off"))
         ScheduleUpdate()
+    elseif command == "tomtom status" then
+        if NS.RefreshTomTom then NS.RefreshTomTom() end
+        Print(NS.tomTomStatus or "TomTom navigation unavailable.")
+        if NS.GetTomTomDiagnostics then Print(NS.GetTomTomDiagnostics()) end
     elseif command == "tomtom" or command == "tomtom on" or command == "tomtom off" then
         QuesterDB.tomTomNavigation = command == "tomtom on"
             or (command == "tomtom" and not QuesterDB.tomTomNavigation)

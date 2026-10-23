@@ -1,5 +1,13 @@
 ## Changelog
 
+### 0.7.2
+
+- Send tracked map pins and native navigation points to TomTom, updating the arrow as the target changes.
+- Support placed user pins when no quest is actively tracked and selected quest offers that have not yet been accepted.
+- Recover Quester's hidden TomTom arrow when temporary distance data becomes available again, preserving other selected waypoints.
+- Add `/quester tomtom status` with navigation API diagnostics and expand regression coverage.
+- Verify the selected quest-offer arrow directly in Retail.
+
 ### 0.7.1
 
 - Set the CurseForge package folder to `Quester` through `.pkgmeta`.

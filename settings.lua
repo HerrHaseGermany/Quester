@@ -66,13 +66,13 @@ function NS.InitSettings()
     local tomTomStatus
     if NS.SetTomTomNavigation then
         y = y + 12
-        Text("TomTom quest navigation", "GameFontNormal")
-        Check("tomTomNavigation", "Send the highlighted quest target to TomTom",
-            "Optional navigation feature. Follows the quest highlighted by the WoW quest helper. Requires TomTom and usable game coordinates. Disable other automatic TomTom arrow integrations, such as RestedXP-TomTom, while using this feature.",
+        Text("TomTom navigation", "GameFontNormal")
+        Check("tomTomNavigation", "Send the tracked quest or map pin to TomTom",
+            "Optional navigation feature. Follows the tracked quest or map pin and the next navigation point supplied by WoW. Requires TomTom and usable game coordinates. Disable other automatic TomTom arrow integrations, such as RestedXP-TomTom, while using this feature.",
             function(enabled)
                 if NS.SetTomTomNavigation then NS.SetTomTomNavigation(enabled) end
             end)
-        tomTomStatus = Text(NS.tomTomStatus or "TomTom quest navigation: off.")
+        tomTomStatus = Text(NS.tomTomStatus or "TomTom navigation: off.")
     end
 
     y = y + 12
@@ -101,7 +101,7 @@ function NS.InitSettings()
     Text("Enter a quest name or ID. Hidden quests are excluded from the target macro and quest window.")
     local updates = {}
     local function UpdateNavigationStatus()
-        if tomTomStatus then tomTomStatus:SetText(NS.tomTomStatus or "TomTom quest navigation: off.") end
+        if tomTomStatus then tomTomStatus:SetText(NS.tomTomStatus or "TomTom navigation: off.") end
     end
     updates[#updates + 1] = UpdateNavigationStatus
     local statusElapsed = 0

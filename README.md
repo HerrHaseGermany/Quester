@@ -169,18 +169,30 @@ If the client reports a full inventory, full quest log, or an item limit after a
 
 Once the inventory has actually been relieved — through more free slots or fewer items — or space has been freed in the quest log, the lock is removed automatically. If the quest dialogue is still open, processing continues automatically; if it has been closed, simply talk to the NPC again. Inventory events that do not change available space, and merely rearranging item stacks, do not trigger another attempt. If the action fails again, Quester pauses until space is freed again. During combat, continuation is delayed until combat ends. /quester resume remains available as an optional manual reset.
 
-TomTom Quest Navigation (Retail / Forever)
+TomTom Navigation (Retail / Forever)
 
 Optional and disabled by default. In Settings → AddOns → Quester, enable
-"Send the highlighted quest target to TomTom", or use `/quester tomtom on`.
+"Send the tracked quest or map pin to TomTom", or use `/quester tomtom on`.
 Disable it in the same panel or with `/quester tomtom off`. The setting is
 saved account-wide. TomTom must also be installed and enabled. It is declared
 as an optional dependency: Quester still loads without it. Enabling navigation
 without TomTom displays an explanatory chat message and status in Quester's
 options rather than an addon loading error.
 
-Quester follows the quest currently highlighted by Blizzard's quest helper,
-using `C_SuperTrack.GetSuperTrackedQuestID()` and
+Quester follows the quest or user map pin currently tracked by Blizzard.
+A placed user pin is also sent to TomTom while no quest is actively tracked;
+it does not need to be supertracked first. An actively tracked quest takes
+precedence over an untracked stored pin. Other active navigation targets
+(such as map POIs) use their native navigation points when no user pin is
+selected. Selected quest offers (quests not yet accepted) use
+`C_QuestLine.GetQuestLineInfo()` for their marker position when no intermediate
+navigation point is supplied. Corpse navigation remains under TomTom's control.
+When available, `C_Navigation.GetNextWaypointForMap()` supplies the next
+navigation point on the player's current map, including its description.
+As Blizzard updates that point, Quester updates the TomTom arrow. This does
+not export a full route or guarantee that Blizzard supplies intermediate stops.
+If no navigation point is available, a tracked user pin uses its own map and
+coordinates; a tracked quest uses `C_SuperTrack.GetSuperTrackedQuestID()` and
 `C_QuestLog.GetNextWaypoint()`. If no waypoint is supplied, it tries the
 quest's native map POI. It checks for changes every half second and creates
 one temporary arrow waypoint without adding extra map/minimap markers.
@@ -189,7 +201,7 @@ text below it. If no waypoint text is supplied, the remaining quest objectives
 are shown instead; if neither is available, only the quest name is shown.
 Completion and turn-in destinations follow the data supplied by the game;
 Quester does not choose the geographically nearest quest or calculate a route.
-When there is no active quest target or no usable coordinates, its waypoint
+When there is no supported navigation target/map pin or no usable coordinates, its waypoint
 is removed. Disabling the feature removes only Quester's waypoint.
 
 Keep only one automatic TomTom arrow integration enabled at a time;
@@ -207,8 +219,12 @@ reported in the navigation status; they do not create a guessed destination.
 map ID and coordinates. Retail / Forever verification: enable the option, highlight a
 quest in Blizzard's tracker, check the TomTom arrow, switch quests, progress
 to a new objective/turn-in, then disable the option. Also test a manual map
-pin, missing TomTom, and simultaneous arrow integrations. In-game behavior
+pin (including an untracked pin and one in another zone), active non-quest
+map targets, changes in navigation points, removal of
+the pin, missing TomTom, and simultaneous arrow integrations. In-game behavior
 still requires verification; mocked API tests do not establish client compatibility.
 
 API source: Blizzard-generated QuestLog and SuperTrack documentation mirrored at
 https://github.com/Gethe/wow-ui-source/tree/live/Interface/AddOns/Blizzard_APIDocumentationGenerated
+
+Navigation API source: https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/InGameNavigationDocumentation.lua

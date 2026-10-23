@@ -2,7 +2,7 @@
 ## Title: |cffffff00Quester|r 
 ## Notes: Lightweight quest helper with quest and merchant automation. Forever (Camelot client name).
 ## Author: Hase
-## Version: 0.7.1
+## Version: 0.7.2
 ## OptionalDeps: TomTom
 ## SavedVariables: QuesterDB
 ## IconTexture: Interface/AddOns/Quester/Media/logo.blp

@@ -1,0 +1,8 @@
+package-as: Quester
+
+ignore:
+  - .vscode
+  - scripts
+  - tests
+  - dist
+  - TODO.md

@@ -2,7 +2,7 @@
 ## Title: |cffffff00Quester|r 
 ## Notes: Lightweight quest helper with quest and merchant automation. Cataclysm Classic.
 ## Author: Hase
-## Version: 0.7
+## Version: 0.7.1
 ## SavedVariables: QuesterDB
 ## IconTexture: Interface/AddOns/Quester/Media/logo.blp
 

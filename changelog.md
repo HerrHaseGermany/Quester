@@ -1,5 +1,11 @@
 ## Changelog
 
+### 0.7.1
+
+- Set the CurseForge package folder to `Quester` through `.pkgmeta`.
+- Add a manual upload ZIP builder that preserves the `Quester/` folder and validates TOC versions and files.
+- Document the difference between upload packages and GitHub source archives.
+
 ### 0.7
 
 - Centralize the addon version in `version.lua` and synchronize all client TOCs.

@@ -24,6 +24,22 @@ Versioning
 `NS.VERSION`, run `python3 scripts/sync_version.py` to update the metadata in all
 client TOCs. Every TOC loads `version.lua` first; diagnostics use the same version.
 
+Packaging for CurseForge
+
+`.pkgmeta` sets `package-as: Quester` for the CurseForge repository packager.
+It keeps the addon folder name stable when packaging a version tag through the
+repository integration. This does not change GitHub's automatic source archives.
+
+Run `python3 scripts/package.py` to create `dist/Quester-<version>.zip`, then
+upload that ZIP to CurseForge. The script checks TOC versions and listed files
+before packaging the addon and its media inside a single `Quester/` folder.
+
+Do not upload GitHub's automatic **Source code (zip)** download: it uses a
+versioned folder such as `Quester-0.7/`, which does not match `Quester.toc` and
+fails CurseForge validation. The ZIP filename may contain the version; the folder
+inside must remain `Quester`. For GitHub releases, attach the generated ZIP as a
+release asset and use that asset for manual uploads.
+
 Client TOCs
 
 `Quester.toc` is the main TOC and fallback. The sibling TOCs are alternative

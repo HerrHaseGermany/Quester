@@ -1,5 +1,18 @@
 -- Spatial regression tests; run from the repository root.
 local update, pins = nil, {}
+local xmlFile = assert(io.open("maps.xml"))
+local xml = xmlFile:read("*a")
+xmlFile:close()
+assert(not xml:find('inherits='), "map pins must not inherit a nonexistent XML template")
+assert(not xml:find('<Scripts>'), "MapCanvas owns pin initialization and mouse scripts")
+assert(xml:find('enableMouse="true"'), "map pins need mouse input for tooltips")
+function CreateFromMixins(...)
+    local result = {}
+    for i = 1, select("#", ...) do
+        for key, value in pairs(select(i, ...)) do result[key] = value end
+    end
+    return result
+end
 local function Frame()
     return {
         SetScript = function(_, event, fn) if event == "OnUpdate" then update = fn end end,
@@ -38,10 +51,21 @@ Minimap = {
     IsShown = function() return true end, GetFrameLevel = function() return 1 end,
     GetWidth = function() return 200 end, GetHeight = function() return 200 end,
 }
-WorldMapFrame = {
+local worldMap = {
     IsShown = function() return display ~= nil end, GetMapID = function() return display end,
     RemoveAllPinsByTemplate = function(self) self.markers = {} end,
-    AcquirePin = function(self, _, marker) self.markers[#self.markers + 1] = marker end,
+    AcquirePin = function(self, template, marker)
+        assert(template == "QuesterMapPinTemplate")
+        local pin = CreateFromMixins(Frame(), QuesterMapPinMixin)
+        -- MapCanvas sets ownership before OnLoad; it dispatches these mouse callbacks.
+        pin:SetOwningMap(self)
+        pin:OnLoad()
+        pin:OnAcquired(marker)
+        assert(pin.x == marker.x and pin.y == marker.y)
+        assert(type(pin.OnMouseEnter) == "function" and type(pin.OnMouseLeave) == "function")
+        self.pin = pin
+        self.markers[#self.markers + 1] = marker
+    end,
 }
 function GetCVar() return "1" end
 function GetPlayerFacing() return facing end
@@ -57,7 +81,31 @@ assert(loadfile("maps.lua"))("Quester", NS)
 NS.InitMaps()
 NS.UpdateMapQuests({{key = 10, title = "Hunt", complete = false}})
 update(nil, 0.2)
+assert(#NS.mapMarkers == 2 and pins[2].shown, "minimap works before Blizzard_MapCanvas loads")
+-- The map's mixin becomes available after Quester's Lua/XML have loaded.
+MapCanvasPinMixin = {
+    SetOwningMap = function(self, map) self.owningMap = map end,
+    UseFrameLevelType = function(self, level)
+        assert(self.owningMap == worldMap, "pin initialization requires map ownership")
+        assert(level == "PIN_FRAME_LEVEL_AREA_POI")
+    end,
+    SetScalingLimits = function() end,
+    SetPosition = function(self, x, y) self.x, self.y = x, y end,
+}
+WorldMapFrame = worldMap
+update(nil, 0.2)
 assert(#NS.mapMarkers == 2 and #WorldMapFrame.markers == 2)
+local tooltipShown = false
+GameTooltip = {
+    SetOwner = function(_, pin) assert(pin == WorldMapFrame.pin) end,
+    AddLine = function() end,
+    Show = function() tooltipShown = true end,
+    Hide = function() tooltipShown = false end,
+}
+WorldMapFrame.pin:OnMouseEnter()
+assert(tooltipShown, "world map pin hover shows its tooltip")
+WorldMapFrame.pin:OnMouseLeave()
+assert(not tooltipShown, "world map pin mouse leave hides its tooltip")
 assert(NS.mapMarkers[1].kind == "objective" and NS.mapMarkers[2].kind == "giver")
 assert(pins[2].shown and math.abs(pins[2].x - 20) < 0.001 and pins[2].y == 0)
 facing = math.pi / 2
@@ -97,4 +145,4 @@ assert(#NS.mapMarkers == 1, "remote quest must not record player as NPC location
 C_Map = nil
 update(nil, 0.2)
 assert(not pins[2].shown, "missing position API hides minimap markers")
-print("PASS: native/observed coordinates, readiness, hidden/completed quests, rotation, map/zone changes, missing/failing APIs and remote dialogs")
+print("PASS: deferred MapCanvas loading, pin lifecycle/tooltips, native/observed coordinates, readiness, hidden/completed quests, rotation, map/zone changes, missing/failing APIs and remote dialogs")

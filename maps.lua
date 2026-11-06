@@ -1,6 +1,7 @@
 local _, NS = ...
 local active, locations, markers = {}, nil, {}
 local miniPins, mapFrame = {}, nil
+local pinMixinReady = false
 local dirty, elapsed, mapID, playerMap = true, 0, nil, nil
 local labels = { giver = "Quest giver", turnin = "Turn-in point", objective = "Objective area" }
 local textures = {
@@ -69,8 +70,8 @@ function QuesterMapPinMixin:OnAcquired(marker)
     Decorate(self, marker)
     self:SetPosition(marker.x, marker.y)
 end
-function QuesterMapPinMixin:OnEnter() Tooltip(self) end
-function QuesterMapPinMixin:OnLeave() if GameTooltip then GameTooltip:Hide() end end
+function QuesterMapPinMixin:OnMouseEnter() Tooltip(self) end
+function QuesterMapPinMixin:OnMouseLeave() if GameTooltip then GameTooltip:Hide() end end
 
 local function Observe(questID, kind, title)
     if not locations or type(questID) ~= "number" or questID <= 0 then return end
@@ -153,6 +154,13 @@ end
 
 local function DrawMap()
     if not mapFrame or not mapFrame.AcquirePin or not mapFrame.RemoveAllPinsByTemplate then return end
+    if not pinMixinReady then
+        -- Blizzard_MapCanvas is load-on-demand. Resolve its base only when ready,
+        -- before AcquirePin copies our mixin onto the first frame.
+        if type(MapCanvasPinMixin) ~= "table" then return end
+        QuesterMapPinMixin = CreateFromMixins(MapCanvasPinMixin, QuesterMapPinMixin)
+        pinMixinReady = true
+    end
     mapFrame:RemoveAllPinsByTemplate("QuesterMapPinTemplate")
     if not mapFrame:IsShown() then return end
     for _, marker in ipairs(markers) do
@@ -203,7 +211,7 @@ local function DrawMinimap()
                     pin:SetFrameLevel(Minimap:GetFrameLevel() + 10)
                     pin:EnableMouse(true)
                     pin:SetScript("OnEnter", Tooltip)
-                    pin:SetScript("OnLeave", QuesterMapPinMixin.OnLeave)
+                    pin:SetScript("OnLeave", QuesterMapPinMixin.OnMouseLeave)
                     miniPins[count] = pin
                 end
                 Decorate(pin, marker)

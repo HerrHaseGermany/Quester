@@ -1,5 +1,11 @@
 ## Changelog
 
+### 0.7.3
+
+- Remove inheritance from the nonexistent `MapCanvasPinTemplate` to prevent the XML loading warning.
+- Initialize map pins with `MapCanvasPinMixin` once Blizzard's map module is available.
+- Use MapCanvas mouse callbacks for world map pin tooltips and add regression coverage for deferred loading and pin initialization.
+
 ### 0.7.2
 
 - Send tracked map pins and native navigation points to TomTom, updating the arrow as the target changes.

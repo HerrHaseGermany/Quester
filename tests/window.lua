@@ -15,6 +15,12 @@ end
 function methods:SetSize(width, height)
     assert(not combat); self.width, self.height = width, height
 end
+function methods:SetPoint(...)
+    assert(not combat); self.point = { ... }
+end
+function methods:ClearAllPoints() assert(not combat); self.point = nil end
+function methods:GetLeft() return 650 end
+function methods:GetTop() return 480 end
 function methods:SetAttribute(key, value)
     assert(not combat); self.attributes[key] = value
 end
@@ -37,6 +43,16 @@ QuesterDB = {}
 local NS = {}
 assert(loadfile('window.lua'))('Quester', NS)
 NS.InitWindow()
+local window = frames.QuesterWindow
+local function assertAnchor(x, y)
+    assert(window.point[1] == 'TOPLEFT' and window.point[2] == UIParent
+        and window.point[3] == 'CENTER' and window.point[4] == x and window.point[5] == y,
+        'window must grow right and down from its fixed top-left anchor')
+end
+assertAnchor(246, 23)
+local handle
+-- The anonymous drag handle is exposed by its registered drag callbacks.
+local originalSetScript = methods.SetScript
 local rows = {
     { title = 'Mine', text = 'Kobold Workers: 0/10', name = 'Kobold Worker' },
     { title = 'Other', text = 'Kobold Workers: 0/10', name = 'Kobold Worker' },
@@ -66,6 +82,7 @@ local many = {}
 for index = 1, 10 do many[index] = { name = 'Mob' .. index } end
 NS.Render(many, '10 targets')
 assert(frames.QuesterWindow.width == 300 and frames.QuesterWindow.height == 80)
+assertAnchor(246, 23)
 print('PASS: compact dimensions, deduplicated icons, secure clicks, combat deferral, visibility and wrapping')
 
 -- Regression: gsub's second return must not reach GameTooltip:SetText as a color.
@@ -100,6 +117,7 @@ assert(frames.QuesterWindow.width == 28 and not buttons[1].shown)
 NS.ToggleCollapsed()
 assert(not QuesterDB.windowCollapsed and buttons[1].shown)
 assert(frames.QuesterWindow.width == 96)
+assertAnchor(246, 23)
 combat = true
 NS.ToggleCollapsed()
 assert(buttons[1].shown and frames.QuesterWindow.width == 96)
@@ -149,3 +167,26 @@ assert(itemButton.shown and frames.QuesterWindow.width == 62)
 NS.ToggleCollapsed(); assert(not itemButton.shown)
 NS.ToggleCollapsed(); assert(itemButton.shown and itemButton.attributes.item1 == 'item:123')
 print('PASS: secure item action, tooltip, shared layout, combat deferral, removal and item-only collapse')
+
+-- Fresh sessions restore both legacy center offsets and saved top-left offsets.
+methods.SetScript = function(self, event, callback)
+    originalSetScript(self, event, callback)
+    if event == 'OnDragStop' then handle = self end
+end
+for _, position in ipairs({ { x = 100, y = -50 }, { point = 'TOPLEFT', x = 86, y = -27 } }) do
+    QuesterDB = { windowPosition = position }
+    local session = {}
+    assert(loadfile('window.lua'))('Quester', session)
+    session.InitWindow()
+    window = frames.QuesterWindow
+    assertAnchor(86, -27)
+    handle.scripts.OnDragStop()
+    assertAnchor(150, 80)
+    assert(QuesterDB.windowPosition.point == 'TOPLEFT'
+        and QuesterDB.windowPosition.x == 150 and QuesterDB.windowPosition.y == 80)
+    session.Render(many, '10 targets')
+    session.ToggleCollapsed()
+    session.ToggleCollapsed()
+    assertAnchor(150, 80)
+end
+print('PASS: fixed top-left anchor across resizing, dragging, collapse and position restoration')

@@ -45,9 +45,16 @@ function NS.InitWindow()
     window:SetMovable(true)
     local position = QuesterDB.windowPosition
     if type(position) == "table" and type(position.x) == "number" and type(position.y) == "number" then
-        window:SetPoint("CENTER", UIParent, "CENTER", position.x, position.y)
+        if position.point == "TOPLEFT" then
+            window:SetPoint("TOPLEFT", UIParent, "CENTER", position.x, position.y)
+        else
+            -- Legacy positions describe the center of the initial 28 x 46 frame.
+            window:SetPoint("TOPLEFT", UIParent, "CENTER",
+                position.x - (PADDING * 2 + GRIP) / 2, position.y + (PADDING * 2 + SIZE) / 2)
+        end
     else
-        window:SetPoint("CENTER", UIParent, "CENTER", 260, 0)
+        window:SetPoint("TOPLEFT", UIParent, "CENTER",
+            260 - (PADDING * 2 + GRIP) / 2, (PADDING * 2 + SIZE) / 2)
     end
     handle = CreateFrame("Button", nil, window)
     handle:SetSize(GRIP, SIZE)
@@ -68,9 +75,12 @@ function NS.InitWindow()
     handle:SetScript("OnDragStop", function()
         if InCombatLockdown() then return end
         window:StopMovingOrSizing()
-        local x, y = window:GetCenter()
+        local x, y = window:GetLeft(), window:GetTop()
         local px, py = UIParent:GetCenter()
-        QuesterDB.windowPosition = { x = x - px, y = y - py }
+        -- StartMoving can change the anchor; restore it before the next resize.
+        window:ClearAllPoints()
+        window:SetPoint("TOPLEFT", UIParent, "CENTER", x - px, y - py)
+        QuesterDB.windowPosition = { point = "TOPLEFT", x = x - px, y = y - py }
     end)
     handle:SetScript("OnClick", NS.ToggleCollapsed)
     handle:SetScript("OnEnter", function(self)

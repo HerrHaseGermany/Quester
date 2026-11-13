@@ -1,5 +1,16 @@
 ## Changelog
 
+### 0.7.5
+
+- Defer world map pin updates during combat to avoid protected `SetPassThroughButtons()` calls from MapCanvas.
+- Apply the latest pending world map markers after combat while continuing minimap updates during combat.
+- Add regression coverage for combat deferral, quest and zone changes, and a single refresh after combat.
+
+### 0.7.4
+
+- Anchor the target window at its top-left handle so resizing and expanding grow right and down.
+- Preserve saved window positions and add regression coverage for resizing, dragging, and collapse state.
+
 ### 0.7.3
 
 - Remove inheritance from the nonexistent `MapCanvasPinTemplate` to prevent the XML loading warning.

@@ -30,6 +30,8 @@ end
 function CreateFrame() local frame = Frame(); pins[#pins + 1] = frame; return frame end
 local function Vector(x, y) return {GetXY = function() return x, y end} end
 local display, current, facing = 1, 1, 0
+local combat, acquisitions, releases = false, 0, 0
+function InCombatLockdown() return combat end
 C_Map = {
     GetBestMapForUnit = function() return current end,
     GetPlayerMapPosition = function() return Vector(0.5, 0.5) end,
@@ -53,14 +55,21 @@ Minimap = {
 }
 local worldMap = {
     IsShown = function() return display ~= nil end, GetMapID = function() return display end,
-    RemoveAllPinsByTemplate = function(self) self.markers = {} end,
+    RemoveAllPinsByTemplate = function(self)
+        assert(not combat, "world map pins must not be released during combat")
+        releases = releases + 1
+        self.markers = {}
+    end,
     AcquirePin = function(self, template, marker)
+        assert(not combat, "AcquirePin must not reach protected passthrough during combat")
+        acquisitions = acquisitions + 1
         assert(template == "QuesterMapPinTemplate")
         local pin = CreateFromMixins(Frame(), QuesterMapPinMixin)
         -- MapCanvas sets ownership before OnLoad; it dispatches these mouse callbacks.
         pin:SetOwningMap(self)
         pin:OnLoad()
         pin:OnAcquired(marker)
+        pin:CheckMouseButtonPassthrough("RightButton")
         assert(pin.x == marker.x and pin.y == marker.y)
         assert(type(pin.OnMouseEnter) == "function" and type(pin.OnMouseLeave) == "function")
         self.pin = pin
@@ -91,6 +100,9 @@ MapCanvasPinMixin = {
     end,
     SetScalingLimits = function() end,
     SetPosition = function(self, x, y) self.x, self.y = x, y end,
+    CheckMouseButtonPassthrough = function()
+        assert(not combat, "SetPassThroughButtons is protected during combat")
+    end,
 }
 WorldMapFrame = worldMap
 update(nil, 0.2)
@@ -111,6 +123,28 @@ assert(pins[2].shown and math.abs(pins[2].x - 20) < 0.001 and pins[2].y == 0)
 facing = math.pi / 2
 update(nil, 0.2)
 assert(math.abs(pins[2].x) < 0.001 and math.abs(pins[2].y + 20) < 0.001)
+local beforeAcquire, beforeRelease = acquisitions, releases
+combat = true
+NS.UpdateMapQuests({{key = 10, title = "Hunt", complete = true}})
+update(nil, 0.2)
+assert(NS.mapMarkers[1].kind == "turnin", "quest data still updates during combat")
+assert(pins[2].shown and pins[2].marker.kind == "turnin", "minimap still updates during combat")
+display, current = 2, 2
+update(nil, 0.2)
+assert(not pins[2].shown, "minimap still follows zone changes during combat")
+display, current = 1, 1
+NS.UpdateMapQuests({{key = 10, title = "Hunt", complete = false}})
+update(nil, 0.2)
+update(nil, 0.2)
+assert(acquisitions == beforeAcquire and releases == beforeRelease, "combat must defer all world map pin changes")
+combat = false
+update(nil, 0.2) -- No new event: the deferred draw must survive dirty data being consumed.
+assert(acquisitions == beforeAcquire + 2 and releases == beforeRelease + 1,
+    "combat end draws only the latest markers once")
+assert(WorldMapFrame.markers[1].kind == "objective")
+update(nil, 0.2)
+assert(acquisitions == beforeAcquire + 2 and releases == beforeRelease + 1,
+    "a completed deferred update must not redraw every tick")
 NS.HandleMapEvent("QUEST_COMPLETE")
 NS.UpdateMapQuests({{key = 40, title = "Delivery", complete = true}})
 update(nil, 0.2)
@@ -145,4 +179,4 @@ assert(#NS.mapMarkers == 1, "remote quest must not record player as NPC location
 C_Map = nil
 update(nil, 0.2)
 assert(not pins[2].shown, "missing position API hides minimap markers")
-print("PASS: deferred MapCanvas loading, pin lifecycle/tooltips, native/observed coordinates, readiness, hidden/completed quests, rotation, map/zone changes, missing/failing APIs and remote dialogs")
+print("PASS: deferred MapCanvas loading, combat deferral/resume, pin lifecycle/tooltips, native/observed coordinates, readiness, hidden/completed quests, rotation, map/zone changes, missing/failing APIs and remote dialogs")

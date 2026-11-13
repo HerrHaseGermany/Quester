@@ -3,6 +3,7 @@ local active, locations, markers = {}, nil, {}
 local miniPins, mapFrame = {}, nil
 local pinMixinReady = false
 local dirty, elapsed, mapID, playerMap = true, 0, nil, nil
+local mapDirty = false
 local labels = { giver = "Quest giver", turnin = "Turn-in point", objective = "Objective area" }
 local textures = {
     giver = "Interface/GossipFrame/AvailableQuestIcon",
@@ -254,8 +255,14 @@ function NS.InitMaps()
             local ok, result = pcall(Collect, display, current)
             markers = ok and result or {}
             NS.mapMarkers = markers
-            DrawMap()
+            mapDirty = true
             dirty = false
+        end
+        -- AcquirePin configures protected mouse passthrough even for reused pins.
+        -- Defer the entire release/acquire cycle until combat lockdown ends.
+        if mapDirty and not (InCombatLockdown and InCombatLockdown()) then
+            DrawMap()
+            mapDirty = false
         end
         pcall(DrawMinimap)
     end)

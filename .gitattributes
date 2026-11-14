@@ -1,0 +1,29 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Git archive allowlist: exclude new files until their runtime role is reviewed.
+# Keep this list in sync with every client TOC, XML include and dynamic resource.
+* export-ignore
+/Media -export-ignore
+/LICENSE -export-ignore
+/Media/logo.blp -export-ignore
+/Quester.toc -export-ignore
+/Quester_Camelot.toc -export-ignore
+/Quester_Cata.toc -export-ignore
+/Quester_Forever.toc -export-ignore
+/Quester_Mainline.toc -export-ignore
+/Quester_Mists.toc -export-ignore
+/Quester_TBC.toc -export-ignore
+/Quester_Vanilla.toc -export-ignore
+/Quester_Wrath.toc -export-ignore
+/automation.lua -export-ignore
+/inspect.lua -export-ignore
+/itemtooltips.lua -export-ignore
+/learning.lua -export-ignore
+/maps.lua -export-ignore
+/maps.xml -export-ignore
+/quester.lua -export-ignore
+/settings.lua -export-ignore
+/tomtom.lua -export-ignore
+/version.lua -export-ignore
+/window.lua -export-ignore
